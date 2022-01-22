@@ -460,16 +460,16 @@ func (s *Server) loop() error {
 		return err
 	}
 
-	worker, ok := s.mgr.GetWorker(uint64(req.ConnId))
+	worker, ok := s.mgr.GetWorker(req.ConnId)
 	if !ok || worker.IsStop() {
-		worker = s.mgr.AddWorker(uint64(req.ConnId), s)
+		worker = s.mgr.AddWorker(req.ConnId, s)
 	}
 
 	reqInfo := NewRequestInfo(req, resp)
 	err = worker.AddRequest(reqInfo)
 	if err != nil {
 		s.ec.Catch("loop", &err)
-		s.mgr.RemoveWorker(uint64(req.ConnId))
+		s.mgr.RemoveWorker(req.ConnId)
 	}
 
 	return err

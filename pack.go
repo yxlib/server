@@ -55,10 +55,10 @@ func NewPack() *Pack {
 
 type Request struct {
 	*Pack
-	ConnId uint32
+	ConnId uint64
 }
 
-func NewRequest(connId uint32) *Request {
+func NewRequest(connId uint64) *Request {
 	return &Request{
 		Pack:   NewPack(),
 		ConnId: connId,
