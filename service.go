@@ -6,6 +6,7 @@ package server
 
 import (
 	"errors"
+	"reflect"
 
 	"github.com/yxlib/yx"
 )
@@ -17,13 +18,23 @@ var (
 	ErrProcNotExist = errors.New("this cmd does not have processor")
 )
 
-type Processor func(req *Request, resp *Response) (int32, error)
+type Processor = func(req *Request, resp *Response) (int32, error)
 
 // type Processor interface {
 // 	OnHandleRequest(req *Request, resp *Response) (int32, error)
 // }
 
 type Service interface {
+	// Get the name of the service.
+	// @return string, the name.
+	GetName() string
+
+	// Add a processor bind with command cmd.
+	// @param p, the processor.
+	// @param cmd, the command of the processor.
+	// @return error, error.
+	AddReflectProcessor(p reflect.Value, cmd uint16) error
+
 	// Call when handle a request.
 	// @param req, the request.
 	// @param resp, the response of the request.
@@ -35,14 +46,14 @@ type Service interface {
 
 type BaseService struct {
 	name             string
-	mapCmd2Processor map[uint16]Processor
+	mapCmd2Processor map[uint16]reflect.Value
 	errCatcher       *yx.ErrCatcher
 }
 
 func NewBaseService(name string) *BaseService {
 	return &BaseService{
 		name:             name,
-		mapCmd2Processor: make(map[uint16]Processor),
+		mapCmd2Processor: make(map[uint16]reflect.Value),
 		errCatcher:       yx.NewErrCatcher("BaseService(" + name + ")"),
 	}
 }
@@ -51,6 +62,29 @@ func NewBaseService(name string) *BaseService {
 // @return string, the name.
 func (s *BaseService) GetName() string {
 	return s.name
+}
+
+// Add a processor bind with command cmd.
+// @param p, the processor.
+// @param cmd, the command of the processor.
+// @return error, error.
+func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint16) error {
+	var err error = nil
+	defer s.errCatcher.DeferThrow("AddReflectProcessor", &err)
+
+	if p.String() == "<invalid Value>" {
+		err = ErrProcNil
+		return err
+	}
+
+	_, ok := s.mapCmd2Processor[cmd]
+	if ok {
+		err = ErrProcExist
+		return err
+	}
+
+	s.mapCmd2Processor[cmd] = p
+	return nil
 }
 
 // Add a processor bind with command cmd.
@@ -66,14 +100,8 @@ func (s *BaseService) AddProcessor(p Processor, cmd uint16) error {
 		return err
 	}
 
-	_, ok := s.mapCmd2Processor[cmd]
-	if ok {
-		err = ErrProcExist
-		return err
-	}
-
-	s.mapCmd2Processor[cmd] = p
-	return nil
+	err = s.AddReflectProcessor(reflect.ValueOf(p), cmd)
+	return err
 }
 
 // Get a processor by command cmd.
@@ -81,7 +109,12 @@ func (s *BaseService) AddProcessor(p Processor, cmd uint16) error {
 // @return Processor, the processor.
 // @return bool, true mean success, false mean failed.
 func (s *BaseService) GetProcessor(cmd uint16) (Processor, bool) {
-	p, ok := s.mapCmd2Processor[cmd]
+	var p Processor = nil
+	v, ok := s.mapCmd2Processor[cmd]
+	if ok {
+		p = v.Interface().(Processor)
+	}
+
 	return p, ok
 }
 
@@ -105,7 +138,7 @@ func (s *BaseService) OnHandleRequest(req *Request, resp *Response, bDebugMode b
 	var err error = nil
 	defer s.errCatcher.DeferThrow("OnHandleRequest", &err)
 
-	processor, ok := s.mapCmd2Processor[req.Cmd]
+	processor, ok := s.GetProcessor(req.Cmd)
 	if !ok {
 		err = ErrProcNotExist
 		return RESP_CODE_SYS_UNKNOWN_CMD, err
