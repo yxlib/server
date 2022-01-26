@@ -4,12 +4,14 @@
 
 package server
 
+import "reflect"
+
 type serviceBinder struct {
-	mapNameService map[string]Service
+	mapReflectName2Service map[string]Service
 }
 
 var ServiceBinder = &serviceBinder{
-	mapNameService: make(map[string]Service),
+	mapReflectName2Service: make(map[string]Service),
 }
 
 // Register service.
@@ -19,8 +21,11 @@ func (r *serviceBinder) BindService(s Service) {
 		return
 	}
 
-	name := s.GetName()
-	r.mapNameService[name] = s
+	t := reflect.TypeOf(s)
+	t = t.Elem()
+	path := t.PkgPath()
+	name := path + "." + t.Name()
+	r.mapReflectName2Service[name] = s
 }
 
 // Get service by name.
@@ -28,6 +33,6 @@ func (r *serviceBinder) BindService(s Service) {
 // @return server.Service, the service with the name.
 // @return bool, true mean success, false mean failed.
 func (r *serviceBinder) GetService(name string) (Service, bool) {
-	s, ok := r.mapNameService[name]
+	s, ok := r.mapReflectName2Service[name]
 	return s, ok
 }
