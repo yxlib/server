@@ -309,18 +309,24 @@ func (s *Server) HandleHttpRequest(req *Request, resp *Response) error {
 	code, err := s.preHandle(req, resp)
 	if err != nil {
 		resp.Code = code
-		s.ec.Catch("HandleRequest", &err)
+		s.ec.Catch("HandleHttpRequest", &err)
 		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
 		return err
 	}
 
 	err = s.handleRequestImpl(req, resp)
 	if err != nil {
-		s.ec.Catch("HandleRequest", &err)
+		s.ec.Catch("HandleHttpRequest", &err)
 	}
 
 	if resp.Code != RESP_CODE_SUCCESS {
 		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
+	}
+
+	// handle response completion
+	err2 := s.responseCompletion(req, resp)
+	if err2 != nil {
+		s.ec.Catch("HandleHttpRequest", &err2)
 	}
 
 	return err

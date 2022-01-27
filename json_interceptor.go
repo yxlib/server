@@ -6,7 +6,6 @@ package server
 
 import (
 	"encoding/json"
-	"reflect"
 )
 
 type JsonInterceptor struct {
@@ -14,13 +13,18 @@ type JsonInterceptor struct {
 
 func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, error) {
 	// request
-	reqType, err := ProtoBinder.GetRequestType(req.Mod, req.Cmd)
+	// reqType, err := ProtoBinder.GetRequestType(req.Mod, req.Cmd)
+	// if err != nil {
+	// 	return RESP_CODE_NOT_SUPPORT_PROTO, err
+	// }
+
+	// v := reflect.New(reqType)
+	// reqData := v.Interface()
+	reqData, err := ProtoBinder.GetRequest(req.Mod, req.Cmd)
 	if err != nil {
 		return RESP_CODE_NOT_SUPPORT_PROTO, err
 	}
 
-	v := reflect.New(reqType)
-	reqData := v.Interface()
 	err = json.Unmarshal(req.Payload, reqData)
 	if err != nil {
 		return RESP_CODE_UNMARSHAL_REQ_FAILED, err
@@ -29,13 +33,20 @@ func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, erro
 	req.ExtData = reqData
 
 	// response
-	respType, err := ProtoBinder.GetResponseType(req.Mod, req.Cmd)
+	// respType, err := ProtoBinder.GetResponseType(req.Mod, req.Cmd)
+	// if err != nil {
+	// 	return RESP_CODE_NOT_SUPPORT_PROTO, err
+	// }
+
+	// v = reflect.New(respType)
+	// resp.ExtData = v.Interface()
+
+	respData, err := ProtoBinder.GetResponse(resp.Mod, resp.Cmd)
 	if err != nil {
 		return RESP_CODE_NOT_SUPPORT_PROTO, err
 	}
 
-	v = reflect.New(respType)
-	resp.ExtData = v.Interface()
+	resp.ExtData = respData
 
 	return 0, nil
 }
@@ -51,5 +62,13 @@ func (i *JsonInterceptor) OnHandleCompletion(req *Request, resp *Response) (int3
 }
 
 func (i *JsonInterceptor) OnResponseCompletion(req *Request, resp *Response) error {
+	if req != nil {
+		ProtoBinder.ReuseRequest(req.ExtData, req.Mod, req.Cmd)
+	}
+
+	if resp != nil {
+		ProtoBinder.ReuseResponse(resp.ExtData, resp.Mod, resp.Cmd)
+	}
+
 	return nil
 }
