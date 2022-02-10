@@ -6,6 +6,8 @@ package server
 
 import (
 	"encoding/json"
+
+	"github.com/yxlib/yx"
 )
 
 type JsonInterceptor struct {
@@ -63,11 +65,17 @@ func (i *JsonInterceptor) OnHandleCompletion(req *Request, resp *Response) (int3
 
 func (i *JsonInterceptor) OnResponseCompletion(req *Request, resp *Response) error {
 	if req != nil {
-		ProtoBinder.ReuseRequest(req.ExtData, req.Mod, req.Cmd)
+		obj, ok := req.ExtData.(yx.Reuseable)
+		if ok {
+			ProtoBinder.ReuseRequest(obj, req.Mod, req.Cmd)
+		}
 	}
 
 	if resp != nil {
-		ProtoBinder.ReuseResponse(resp.ExtData, resp.Mod, resp.Cmd)
+		obj, ok := resp.ExtData.(yx.Reuseable)
+		if ok {
+			ProtoBinder.ReuseResponse(obj, resp.Mod, resp.Cmd)
+		}
 	}
 
 	return nil
