@@ -1,0 +1,24 @@
+{
+    "services" :
+    [
+        {
+            "service" : "github.com/yxlib/httpsrv.ExampleService",
+            "mod" : 1,
+            "processors" :
+            [
+                {
+                    "cmd" : 1,
+                    "handler" : "OnHandleCmd1",
+                    "req" : "github.com/yxlib/httpsrv.Cmd1Request",
+                    "resp" : "github.com/yxlib/httpsrv.Cmd1Response"
+                },
+                {
+                    "cmd" : 2,
+                    "handler" : "OnHandleCmd2",
+                    "req" : "github.com/yxlib/httpsrv.Cmd2Request",
+                    "resp" : "github.com/yxlib/httpsrv.Cmd2Response"
+                }
+            ]
+        }
+    ]
+}
