@@ -73,7 +73,12 @@ type Interceptor interface {
 
 type InterceptorList = []Interceptor
 
-type Server struct {
+type Server interface {
+	AddService(srv Service, mod uint16) error
+	UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16)
+}
+
+type BaseServer struct {
 	name                string
 	bDebugMode          bool
 	srvNet              ServerNet
@@ -88,10 +93,10 @@ type Server struct {
 	logger  *yx.Logger
 }
 
-func NewServer(name string, srvNet ServerNet) *Server {
+func NewBaseServer(name string, srvNet ServerNet) *BaseServer {
 	tag := "Server(" + name + ")"
 
-	s := &Server{
+	s := &BaseServer{
 		name:                name,
 		bDebugMode:          false,
 		srvNet:              srvNet,
@@ -109,7 +114,7 @@ func NewServer(name string, srvNet ServerNet) *Server {
 	return s
 }
 
-func (s *Server) GetSrvNet() ServerNet {
+func (s *BaseServer) GetSrvNet() ServerNet {
 	return s.srvNet
 }
 
@@ -117,7 +122,7 @@ func (s *Server) GetSrvNet() ServerNet {
 // @param srv, the service.
 // @param mod, the module of the service.
 // @return error, error.
-func (s *Server) AddService(srv Service, mod uint16) error {
+func (s *BaseServer) AddService(srv Service, mod uint16) error {
 	var err error = nil
 	defer s.ec.DeferThrow("AddService", &err)
 
@@ -140,7 +145,7 @@ func (s *Server) AddService(srv Service, mod uint16) error {
 // @param mod, the module of the service.
 // @return *Service, the service.
 // @return bool, true mean success, false mean failed.
-func (s *Server) GetService(mod uint16) (Service, bool) {
+func (s *BaseServer) GetService(mod uint16) (Service, bool) {
 	srv, ok := s.mapMod2Service[mod]
 	return srv, ok
 }
@@ -148,7 +153,7 @@ func (s *Server) GetService(mod uint16) (Service, bool) {
 // Remove a service by module mod.
 // @param mod, the module of the service.
 // @return error, error.
-func (s *Server) RemoveService(mod uint16) error {
+func (s *BaseServer) RemoveService(mod uint16) error {
 	_, ok := s.mapMod2Service[mod]
 	if !ok {
 		return s.ec.Throw("RemoveService", ErrSrvServNotExist)
@@ -160,28 +165,28 @@ func (s *Server) RemoveService(mod uint16) error {
 
 // Open or close dubug mode.
 // @param bDebugMode, true mean use debug mode, false mean close debug mode.
-func (s *Server) SetDebugMode(bDebugMode bool) {
+func (s *BaseServer) SetDebugMode(bDebugMode bool) {
 	s.bDebugMode = bDebugMode
 }
 
 // Open worker mode.
 // @param maxRequestNum, max waitting request queue of the worker.
 // @param maxTaskNum, max waitting task queue of the worker.
-func (s *Server) UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16) {
+func (s *BaseServer) UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16) {
 	s.bWorkerMode = true
 	s.mgr = NewSessionMgr(maxRequestNum, maxTaskNum)
 }
 
 // Remove a worker.
 // @param id, id of the worker.
-func (s *Server) RemoveWorker(id uint64) {
+func (s *BaseServer) RemoveWorker(id uint64) {
 	s.mgr.RemoveWorker(id)
 }
 
 // Add a global interceptor.
 // @param it, the interceptor.
 // @return error, error.
-func (s *Server) AddGlobalInterceptor(it Interceptor) error {
+func (s *BaseServer) AddGlobalInterceptor(it Interceptor) error {
 	var err error = nil
 	defer s.ec.DeferThrow("AddGlobalInterceptor", &err)
 
@@ -197,7 +202,7 @@ func (s *Server) AddGlobalInterceptor(it Interceptor) error {
 // Remove a global interceptor.
 // @param it, the interceptor.
 // @return error, error.
-func (s *Server) RemoveGlobalInterceptor(it Interceptor) error {
+func (s *BaseServer) RemoveGlobalInterceptor(it Interceptor) error {
 	var err error = nil
 	defer s.ec.DeferThrow("RemoveGlobalInterceptor", &err)
 
@@ -221,7 +226,7 @@ func (s *Server) RemoveGlobalInterceptor(it Interceptor) error {
 // @param it, the interceptor.
 // @param mod, module of the interceptor.
 // @return error, error.
-func (s *Server) AddModInterceptor(it Interceptor, mod uint16) error {
+func (s *BaseServer) AddModInterceptor(it Interceptor, mod uint16) error {
 	var err error = nil
 	defer s.ec.DeferThrow("AddModInterceptor", &err)
 
@@ -243,7 +248,7 @@ func (s *Server) AddModInterceptor(it Interceptor, mod uint16) error {
 // @param it, the interceptor.
 // @param mod, module of the interceptor.
 // @return error, error.
-func (s *Server) RemoveModInterceptor(it Interceptor, mod uint16) error {
+func (s *BaseServer) RemoveModInterceptor(it Interceptor, mod uint16) error {
 	var err error = nil
 	defer s.ec.DeferThrow("RemoveModInterceptor", &err)
 
@@ -270,7 +275,7 @@ func (s *Server) RemoveModInterceptor(it Interceptor, mod uint16) error {
 }
 
 // Start server loop, it will read request actively.
-func (s *Server) Start() {
+func (s *BaseServer) Start() {
 	for {
 		err := s.loop()
 		if err == ErrSrvNetClose {
@@ -284,7 +289,7 @@ func (s *Server) Start() {
 // Push a package.
 // @param pack, the package to push.
 // @return error, error.
-func (s *Server) Push(pack *Pack) error {
+func (s *BaseServer) Push(pack *Pack) error {
 	err := s.srvNet.Push(pack)
 	if err != nil {
 		s.ec.Catch("Push", &err)
@@ -294,7 +299,7 @@ func (s *Server) Push(pack *Pack) error {
 }
 
 // Stop server loop.
-func (s *Server) Stop() {
+func (s *BaseServer) Stop() {
 	s.srvNet.Close()
 	// s.evtStop.Send()
 
@@ -309,7 +314,7 @@ func (s *Server) Stop() {
 // @param req, the request.
 // @param resp, the response for this request.
 // @return error, error.
-func (s *Server) HandleHttpRequest(req *Request, resp *Response) error {
+func (s *BaseServer) HandleHttpRequest(req *Request, resp *Response) error {
 	code, err := s.preHandle(req, resp)
 	if err != nil {
 		resp.Code = code
@@ -339,19 +344,19 @@ func (s *Server) HandleHttpRequest(req *Request, resp *Response) error {
 //================================================
 //                 WorkerOwner
 //================================================
-func (s *Server) OnWorkerClose(w *SessionWorker) {
+func (s *BaseServer) OnWorkerClose(w *SessionWorker) {
 	id := w.GetID()
 	s.mgr.RemoveWorker(id)
 }
 
-func (s *Server) OnHandleRequest(w *SessionWorker, req *Request, resp *Response) error {
+func (s *BaseServer) OnHandleRequest(w *SessionWorker, req *Request, resp *Response) error {
 	return s.handleRequest(req, resp)
 }
 
 //================================================
 //                 private
 //================================================
-func (s *Server) interceptHandle(it Interceptor, step uint8, req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) interceptHandle(it Interceptor, step uint8, req *Request, resp *Response) (int32, error) {
 	var code int32 = 0
 	var err error = nil
 
@@ -366,7 +371,7 @@ func (s *Server) interceptHandle(it Interceptor, step uint8, req *Request, resp 
 	return code, s.ec.Throw("interceptHandle", err)
 }
 
-func (s *Server) listInterceptHandle(list InterceptorList, step uint8, req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) listInterceptHandle(list InterceptorList, step uint8, req *Request, resp *Response) (int32, error) {
 	if len(list) == 0 {
 		return RESP_CODE_SUCCESS, nil
 	}
@@ -381,7 +386,7 @@ func (s *Server) listInterceptHandle(list InterceptorList, step uint8, req *Requ
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *Server) reverseListInterceptHandle(list InterceptorList, step uint8, req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) reverseListInterceptHandle(list InterceptorList, step uint8, req *Request, resp *Response) (int32, error) {
 	if len(list) == 0 {
 		return RESP_CODE_SUCCESS, nil
 	}
@@ -396,7 +401,7 @@ func (s *Server) reverseListInterceptHandle(list InterceptorList, step uint8, re
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *Server) intercept(step uint8, req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) intercept(step uint8, req *Request, resp *Response) (int32, error) {
 	// global first
 	code, err := s.listInterceptHandle(s.globalInterceptors, step, req, resp)
 	if err != nil {
@@ -414,7 +419,7 @@ func (s *Server) intercept(step uint8, req *Request, resp *Response) (int32, err
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *Server) reverseIntercept(step uint8, req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) reverseIntercept(step uint8, req *Request, resp *Response) (int32, error) {
 	// mod first, reverse visit
 	list, ok := s.mapMod2Interceptors[req.Mod]
 	if ok {
@@ -432,22 +437,22 @@ func (s *Server) reverseIntercept(step uint8, req *Request, resp *Response) (int
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *Server) preHandle(req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) preHandle(req *Request, resp *Response) (int32, error) {
 	code, err := s.intercept(INTERCPT_STEP_PRE_HANDLE, req, resp)
 	return code, s.ec.Throw("preHandle", err)
 }
 
-func (s *Server) handleCompletion(req *Request, resp *Response) (int32, error) {
+func (s *BaseServer) handleCompletion(req *Request, resp *Response) (int32, error) {
 	code, err := s.reverseIntercept(INTERCPT_STEP_HANDLE_COMPL, req, resp)
 	return code, s.ec.Throw("handleCompletion", err)
 }
 
-func (s *Server) responseCompletion(req *Request, resp *Response) error {
+func (s *BaseServer) responseCompletion(req *Request, resp *Response) error {
 	_, err := s.reverseIntercept(INTERCPT_STEP_RESP_COMPL, req, resp)
 	return s.ec.Throw("responseCompletion", err)
 }
 
-func (s *Server) loop() error {
+func (s *BaseServer) loop() error {
 	req, err := s.srvNet.ReadRequest()
 	if err != nil {
 		return ErrSrvNetClose
@@ -485,7 +490,7 @@ func (s *Server) loop() error {
 	return err
 }
 
-func (s *Server) handleRequest(req *Request, resp *Response) error {
+func (s *BaseServer) handleRequest(req *Request, resp *Response) error {
 	err := s.handleRequestImpl(req, resp)
 	if err != nil {
 		s.ec.Catch("handleRequest", &err)
@@ -507,7 +512,7 @@ func (s *Server) handleRequest(req *Request, resp *Response) error {
 	return err
 }
 
-func (s *Server) handleRequestImpl(req *Request, resp *Response) error {
+func (s *BaseServer) handleRequestImpl(req *Request, resp *Response) error {
 	var err error = nil
 	defer s.ec.DeferThrow("handleRequestImpl", &err)
 

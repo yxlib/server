@@ -21,13 +21,15 @@ var Builder = &builder{
 // build server.
 // @param srv, dest server.
 // @param cfg, the server config.
-func (b *builder) Build(srv *Server, cfg *Config) {
+func (b *builder) Build(srv Server, cfg *Config) {
+	srv.UseWorkerMode(cfg.MaxReqNum, cfg.MaxTaskNum)
+
 	for _, servCfg := range cfg.Services {
 		b.parsePatternCfg(srv, servCfg)
 	}
 }
 
-func (b *builder) parsePatternCfg(srv *Server, servCfg *ServiceConf) {
+func (b *builder) parsePatternCfg(srv Server, servCfg *ServiceConf) {
 	s, ok := ServiceBinder.GetService(servCfg.Service)
 	if !ok {
 		b.logger.W("Not support service ", servCfg.Service)

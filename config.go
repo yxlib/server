@@ -18,7 +18,9 @@ type ServiceConf struct {
 }
 
 type Config struct {
-	Services []*ServiceConf `json:"services"`
+	MaxReqNum  uint16         `json:"max_req_num"`
+	MaxTaskNum uint16         `json:"max_task_num"`
+	Services   []*ServiceConf `json:"services"`
 }
 
 var CfgInst *Config = &Config{}

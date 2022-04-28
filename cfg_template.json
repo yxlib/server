@@ -1,22 +1,24 @@
 {
+    "max_req_num" : 10,
+    "max_task_num" : 10,
     "services" :
     [
         {
-            "service" : "github.com/yxlib/httpsrv.ExampleService",
+            "service" : "github.com/yxlib/server.ExampleService",
             "mod" : 1,
             "processors" :
             [
                 {
                     "cmd" : 1,
                     "handler" : "OnHandleCmd1",
-                    "req" : "github.com/yxlib/httpsrv.Cmd1Request",
-                    "resp" : "github.com/yxlib/httpsrv.Cmd1Response"
+                    "req" : "github.com/yxlib/server.Cmd1Request",
+                    "resp" : "github.com/yxlib/server.Cmd1Response"
                 },
                 {
                     "cmd" : 2,
                     "handler" : "OnHandleCmd2",
-                    "req" : "github.com/yxlib/httpsrv.Cmd2Request",
-                    "resp" : "github.com/yxlib/httpsrv.Cmd2Response"
+                    "req" : "github.com/yxlib/server.Cmd2Request",
+                    "resp" : "github.com/yxlib/server.Cmd2Response"
                 }
             ]
         }
