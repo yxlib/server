@@ -49,6 +49,10 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 		servStr = servStr[idx+1:]
 		f.WriteString("    server.ServiceBinder.BindService(" + packName + ".New" + servStr + "())\n")
 		for _, cfg := range servCfg.Processors {
+			if cfg.Req == "" || cfg.Resp == "" {
+				continue
+			}
+
 			f.WriteString("    // " + cfg.Handler + "\n")
 
 			reqStr := cfg.Req
@@ -87,9 +91,11 @@ func writeImport(servConfs []*ServiceConf, regPackName string, f *os.File) {
 	packSet.Add("github.com/yxlib/server")
 
 	for _, servCfg := range servConfs {
-		servStr := servCfg.Service
-		idx := strings.LastIndex(servStr, ".")
-		packSet.Add(servStr[:idx])
+		fullPackName := yx.GetFullPackageName(servCfg.Service)
+		if fullPackName != "" {
+			packSet.Add(fullPackName)
+		}
+
 		for _, cfg := range servCfg.Processors {
 			addProtoPackage(cfg.Req, regPackName, packSet)
 			addProtoPackage(cfg.Resp, regPackName, packSet)
@@ -109,19 +115,9 @@ func addProtoPackage(protoCfg string, regPackName string, packSet *yx.Set) {
 		return
 	}
 
-	idx := strings.LastIndex(protoCfg, ".")
-	packName := protoCfg[:idx]
-
-	idx = strings.LastIndex(packName, "/")
-	if idx < 0 {
-		if packName != regPackName {
-			packSet.Add(packName)
-		}
-
-		return
-	}
-
-	if packName[idx+1:] != regPackName {
-		packSet.Add(packName)
+	fullPackName := yx.GetFullPackageName(protoCfg)
+	filePackName := yx.GetFilePackageName(fullPackName)
+	if filePackName != regPackName {
+		packSet.Add(fullPackName)
 	}
 }

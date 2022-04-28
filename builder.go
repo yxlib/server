@@ -43,15 +43,17 @@ func (b *builder) parseProcCfg(s Service, servCfg *ServiceConf) {
 
 	for _, cfg := range servCfg.Processors {
 		// proto
-		err := ProtoBinder.BindProto(servCfg.Mod, cfg.Cmd, cfg.Req, cfg.Resp)
-		if err != nil {
-			b.logger.W("not support processor ", cfg.Handler)
-			continue
+		if cfg.Req != "" && cfg.Resp != "" {
+			err := ProtoBinder.BindProto(servCfg.Mod, cfg.Cmd, cfg.Req, cfg.Resp)
+			if err != nil {
+				b.logger.W("not support processor ", cfg.Handler)
+				continue
+			}
 		}
 
 		// processor
 		m := v.MethodByName(cfg.Handler)
-		err = s.AddReflectProcessor(m, cfg.Cmd)
+		err := s.AddReflectProcessor(m, cfg.Cmd)
 		if err != nil {
 			b.logger.E("AddReflectProcessor err: ", err)
 			b.logger.W("not support processor ", cfg.Handler)
