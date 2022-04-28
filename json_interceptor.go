@@ -20,17 +20,19 @@ func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, erro
 
 	// v := reflect.New(reqType)
 	// reqData := v.Interface()
-	reqData, err := ProtoBinder.GetRequest(req.Mod, req.Cmd)
-	if err != nil {
-		return RESP_CODE_NOT_SUPPORT_PROTO, err
-	}
+	if req.Payload != nil {
+		reqData, err := ProtoBinder.GetRequest(req.Mod, req.Cmd)
+		if err != nil {
+			return RESP_CODE_NOT_SUPPORT_PROTO, err
+		}
 
-	err = json.Unmarshal(req.Payload, reqData)
-	if err != nil {
-		return RESP_CODE_UNMARSHAL_REQ_FAILED, err
-	}
+		err = json.Unmarshal(req.Payload, reqData)
+		if err != nil {
+			return RESP_CODE_UNMARSHAL_REQ_FAILED, err
+		}
 
-	req.ExtData = reqData
+		req.ExtData = reqData
+	}
 
 	// response
 	// respType, err := ProtoBinder.GetResponseType(req.Mod, req.Cmd)

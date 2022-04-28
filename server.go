@@ -40,11 +40,6 @@ type ServerNet interface {
 	// @return error, error.
 	WriteResponse(resp *Response) error
 
-	// Push a package.
-	// @param pack, the package to push.
-	// @return error, error.
-	Push(p *Pack) error
-
 	// Close the net.
 	Close()
 }
@@ -290,11 +285,25 @@ func (s *BaseServer) Start() {
 // @param pack, the package to push.
 // @return error, error.
 func (s *BaseServer) Push(pack *Pack) error {
-	err := s.srvNet.Push(pack)
-	if err != nil {
-		s.ec.Catch("Push", &err)
+	var err error = nil
+	defer s.ec.Catch("Push", &err)
+
+	resp := &Response{
+		Pack: pack,
+		Code: 0,
 	}
 
+	_, err = s.handleCompletion(nil, resp)
+	if err != nil {
+		return err
+	}
+
+	err = s.srvNet.WriteResponse(resp)
+	if err != nil {
+		return err
+	}
+
+	err = s.responseCompletion(nil, resp)
 	return err
 }
 
