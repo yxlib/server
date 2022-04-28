@@ -109,6 +109,10 @@ func NewServer(name string, srvNet ServerNet) *Server {
 	return s
 }
 
+func (s *Server) GetSrvNet() ServerNet {
+	return s.srvNet
+}
+
 // Add a service bind with module mod.
 // @param srv, the service.
 // @param mod, the module of the service.

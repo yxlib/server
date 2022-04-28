@@ -17,11 +17,7 @@ var (
 	ErrProtoBindReuseIsNil    = errors.New("reuse object is nil")
 )
 
-const (
-	CMD_PER_MOD      = 100
-	INIT_REUSE_COUNT = 10
-	MAX_REUSE_COUNT  = 100
-)
+const MAX_REUSE_COUNT = 100
 
 type protoBinder struct {
 	mapProtoNo2ReqName  map[uint16]string
@@ -37,8 +33,9 @@ var ProtoBinder = &protoBinder{
 
 // Register proto type.
 // @param proto, the proto.
-func (b *protoBinder) RegisterProto(proto yx.Reuseable) error {
-	return b.factory.RegisterObject(proto, INIT_REUSE_COUNT, MAX_REUSE_COUNT)
+func (b *protoBinder) RegisterProto(proto interface{}) error {
+	_, err := b.factory.RegisterObject(proto, nil, MAX_REUSE_COUNT)
+	return err
 }
 
 // Get the proto type by type name.
@@ -56,7 +53,7 @@ func (b *protoBinder) GetProtoType(name string) (reflect.Type, bool) {
 // @param respProtoName, the response proto name.
 // @return error, error.
 func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, respProtoName string) error {
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 
 	_, ok := b.mapProtoNo2ReqName[protoNo]
 	if ok {
@@ -89,7 +86,7 @@ func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, res
 // @return reflect.Type, reflect type of the request.
 // @return error, error.
 func (b *protoBinder) GetRequestType(mod uint16, cmd uint16) (reflect.Type, error) {
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return nil, ErrProtoBindProtoNotExist
@@ -104,7 +101,7 @@ func (b *protoBinder) GetRequestType(mod uint16, cmd uint16) (reflect.Type, erro
 // @return reflect.Type, reflect type of the response.
 // @return error, error.
 func (b *protoBinder) GetResponseType(mod uint16, cmd uint16) (reflect.Type, error) {
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return nil, ErrProtoBindProtoNotExist
@@ -119,7 +116,7 @@ func (b *protoBinder) GetResponseType(mod uint16, cmd uint16) (reflect.Type, err
 // @return interface{}, the request object.
 // @return error, error.
 func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return nil, ErrProtoBindProtoNotExist
@@ -133,12 +130,12 @@ func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
 // @param mod, the module of the service.
 // @param cmd, the command of the service.
 // @return error, error.
-func (b *protoBinder) ReuseRequest(v yx.Reuseable, mod uint16, cmd uint16) error {
+func (b *protoBinder) ReuseRequest(v interface{}, mod uint16, cmd uint16) error {
 	if v == nil {
 		return ErrProtoBindReuseIsNil
 	}
 
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return ErrProtoBindProtoNotExist
@@ -153,7 +150,7 @@ func (b *protoBinder) ReuseRequest(v yx.Reuseable, mod uint16, cmd uint16) error
 // @return interface{}, the response object.
 // @return error, error.
 func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return nil, ErrProtoBindProtoNotExist
@@ -167,22 +164,18 @@ func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
 // @param mod, the module of the service.
 // @param cmd, the command of the service.
 // @return error, error.
-func (b *protoBinder) ReuseResponse(v yx.Reuseable, mod uint16, cmd uint16) error {
+func (b *protoBinder) ReuseResponse(v interface{}, mod uint16, cmd uint16) error {
 	if v == nil {
 		return ErrProtoBindReuseIsNil
 	}
 
-	protoNo := b.getProtoNo(mod, cmd)
+	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return ErrProtoBindProtoNotExist
 	}
 
 	return b.factory.ReuseObject(v, name)
-}
-
-func (b *protoBinder) getProtoNo(mod uint16, cmd uint16) uint16 {
-	return mod*CMD_PER_MOD + cmd
 }
 
 func (b *protoBinder) getReflectTypeByName(name string) (reflect.Type, error) {
