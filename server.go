@@ -29,21 +29,6 @@ const (
 	INTERCPT_STEP_RESP_COMPL   = 3
 )
 
-type ServerNet interface {
-	// Read a request.
-	// @return *Request, a request or nil.
-	// @return error, error.
-	ReadRequest() (*Request, error)
-
-	// Write a response.
-	// @param resp, the response
-	// @return error, error.
-	WriteResponse(resp *Response) error
-
-	// Close the net.
-	Close()
-}
-
 type Interceptor interface {
 	// Call before handle the request.
 	// @param req, the request
@@ -76,7 +61,7 @@ type Server interface {
 type BaseServer struct {
 	name                string
 	bDebugMode          bool
-	srvNet              ServerNet
+	srvNet              Net
 	mapMod2Service      map[uint16]Service
 	globalInterceptors  InterceptorList
 	mapMod2Interceptors map[uint16]InterceptorList
@@ -88,7 +73,7 @@ type BaseServer struct {
 	logger  *yx.Logger
 }
 
-func NewBaseServer(name string, srvNet ServerNet) *BaseServer {
+func NewBaseServer(name string, srvNet Net) *BaseServer {
 	tag := "Server(" + name + ")"
 
 	s := &BaseServer{
@@ -109,7 +94,7 @@ func NewBaseServer(name string, srvNet ServerNet) *BaseServer {
 	return s
 }
 
-func (s *BaseServer) GetSrvNet() ServerNet {
+func (s *BaseServer) GetNet() Net {
 	return s.srvNet
 }
 
