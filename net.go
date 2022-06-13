@@ -1,3 +1,7 @@
+// Copyright 2022 Guan Jianchang. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package server
 
 import (
@@ -11,6 +15,10 @@ var (
 )
 
 type Net interface {
+	// Add a request.
+	// @param *Request, a request.
+	AddRequest(req *Request)
+
 	// Read a request.
 	// @return *Request, a request or nil.
 	// @return error, error.
@@ -39,6 +47,10 @@ func NewBaseNet(maxReadQue uint32) *BaseNet {
 	}
 }
 
+func (n *BaseNet) AddRequest(req *Request) {
+	n.chanRequest <- req
+}
+
 // ServerNet
 func (n *BaseNet) ReadRequest() (*Request, error) {
 	req, ok := <-n.chanRequest
@@ -55,8 +67,4 @@ func (n *BaseNet) WriteResponse(resp *Response) error {
 
 func (n *BaseNet) Close() {
 	close(n.chanRequest)
-}
-
-func (n *BaseNet) AddRequest(req *Request) {
-	n.chanRequest <- req
 }
