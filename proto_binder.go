@@ -23,19 +23,21 @@ type protoBinder struct {
 	mapProtoNo2ReqName  map[uint16]string
 	mapProtoNo2RespName map[uint16]string
 	factory             *yx.ObjectFactory
+	ec                  *yx.ErrCatcher
 }
 
 var ProtoBinder = &protoBinder{
 	mapProtoNo2ReqName:  make(map[uint16]string),
 	mapProtoNo2RespName: make(map[uint16]string),
 	factory:             yx.NewObjectFactory(),
+	ec:                  yx.NewErrCatcher("protoBinder"),
 }
 
 // Register proto type.
 // @param proto, the proto.
 func (b *protoBinder) RegisterProto(proto interface{}) error {
 	_, err := b.factory.RegisterObject(proto, nil, MAX_REUSE_COUNT)
-	return err
+	return b.ec.Throw("RegisterProto", err)
 }
 
 // Get the proto type by type name.
@@ -57,22 +59,22 @@ func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, res
 
 	_, ok := b.mapProtoNo2ReqName[protoNo]
 	if ok {
-		return ErrProtoBindProtoExist
+		return b.ec.Throw("BindProto", ErrProtoBindProtoExist)
 	}
 
 	_, ok = b.factory.GetReflectType(reqProtoName)
 	if !ok {
-		return ErrProtoBindProtoNotExist
+		return b.ec.Throw("BindProto", ErrProtoBindProtoNotExist)
 	}
 
 	_, ok = b.mapProtoNo2RespName[protoNo]
 	if ok {
-		return ErrProtoBindProtoExist
+		return b.ec.Throw("BindProto", ErrProtoBindProtoExist)
 	}
 
 	_, ok = b.factory.GetReflectType(respProtoName)
 	if !ok {
-		return ErrProtoBindProtoNotExist
+		return b.ec.Throw("BindProto", ErrProtoBindProtoNotExist)
 	}
 
 	b.mapProtoNo2ReqName[protoNo] = reqProtoName
@@ -89,10 +91,11 @@ func (b *protoBinder) GetRequestType(mod uint16, cmd uint16) (reflect.Type, erro
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
-		return nil, ErrProtoBindProtoNotExist
+		return nil, b.ec.Throw("GetRequestType", ErrProtoBindProtoNotExist)
 	}
 
-	return b.getReflectTypeByName(name)
+	refType, err := b.getReflectTypeByName(name)
+	return refType, b.ec.Throw("GetRequestType", err)
 }
 
 // Get the response reflect type.
@@ -104,10 +107,11 @@ func (b *protoBinder) GetResponseType(mod uint16, cmd uint16) (reflect.Type, err
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
-		return nil, ErrProtoBindProtoNotExist
+		return nil, b.ec.Throw("GetResponseType", ErrProtoBindProtoNotExist)
 	}
 
-	return b.getReflectTypeByName(name)
+	refType, err := b.getReflectTypeByName(name)
+	return refType, b.ec.Throw("GetResponseType", err)
 }
 
 // Get an request object.
@@ -119,10 +123,11 @@ func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
-		return nil, ErrProtoBindProtoNotExist
+		return nil, b.ec.Throw("GetRequest", ErrProtoBindProtoNotExist)
 	}
 
-	return b.factory.CreateObject(name)
+	obj, err := b.factory.CreateObject(name)
+	return obj, b.ec.Throw("GetRequest", err)
 }
 
 // Reuse an request object.
@@ -132,16 +137,17 @@ func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
 // @return error, error.
 func (b *protoBinder) ReuseRequest(v interface{}, mod uint16, cmd uint16) error {
 	if v == nil {
-		return ErrProtoBindReuseIsNil
+		return b.ec.Throw("ReuseRequest", ErrProtoBindReuseIsNil)
 	}
 
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
-		return ErrProtoBindProtoNotExist
+		return b.ec.Throw("ReuseRequest", ErrProtoBindProtoNotExist)
 	}
 
-	return b.factory.ReuseObject(v, name)
+	err := b.factory.ReuseObject(v, name)
+	return b.ec.Throw("ReuseRequest", err)
 }
 
 // Get an response object.
@@ -153,10 +159,11 @@ func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
-		return nil, ErrProtoBindProtoNotExist
+		return nil, b.ec.Throw("GetResponse", ErrProtoBindProtoNotExist)
 	}
 
-	return b.factory.CreateObject(name)
+	obj, err := b.factory.CreateObject(name)
+	return obj, b.ec.Throw("GetResponse", err)
 }
 
 // Reuse an response object.
@@ -166,22 +173,23 @@ func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
 // @return error, error.
 func (b *protoBinder) ReuseResponse(v interface{}, mod uint16, cmd uint16) error {
 	if v == nil {
-		return ErrProtoBindReuseIsNil
+		return b.ec.Throw("ReuseResponse", ErrProtoBindReuseIsNil)
 	}
 
 	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
-		return ErrProtoBindProtoNotExist
+		return b.ec.Throw("ReuseResponse", ErrProtoBindProtoNotExist)
 	}
 
-	return b.factory.ReuseObject(v, name)
+	err := b.factory.ReuseObject(v, name)
+	return b.ec.Throw("ReuseResponse", err)
 }
 
 func (b *protoBinder) getReflectTypeByName(name string) (reflect.Type, error) {
 	objType, ok := b.factory.GetReflectType(name)
 	if !ok {
-		return nil, ErrProtoBindProtoNotExist
+		return nil, b.ec.Throw("getReflectTypeByName", ErrProtoBindProtoNotExist)
 	}
 
 	return objType, nil

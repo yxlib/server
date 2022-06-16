@@ -47,14 +47,14 @@ type Service interface {
 type BaseService struct {
 	name             string
 	mapCmd2Processor map[uint16]reflect.Value
-	errCatcher       *yx.ErrCatcher
+	ec               *yx.ErrCatcher
 }
 
 func NewBaseService(name string) *BaseService {
 	return &BaseService{
 		name:             name,
 		mapCmd2Processor: make(map[uint16]reflect.Value),
-		errCatcher:       yx.NewErrCatcher("BaseService(" + name + ")"),
+		ec:               yx.NewErrCatcher("BaseService(" + name + ")"),
 	}
 }
 
@@ -70,7 +70,7 @@ func (s *BaseService) GetName() string {
 // @return error, error.
 func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint16) error {
 	var err error = nil
-	defer s.errCatcher.DeferThrow("AddReflectProcessor", &err)
+	defer s.ec.DeferThrow("AddReflectProcessor", &err)
 
 	if p.String() == "<invalid Value>" {
 		err = ErrProcNil
@@ -93,7 +93,7 @@ func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint16) error {
 // @return error, error.
 func (s *BaseService) AddProcessor(p Processor, cmd uint16) error {
 	var err error = nil
-	defer s.errCatcher.DeferThrow("AddProcessor", &err)
+	defer s.ec.DeferThrow("AddProcessor", &err)
 
 	if p == nil {
 		err = ErrProcNil
@@ -124,7 +124,7 @@ func (s *BaseService) GetProcessor(cmd uint16) (Processor, bool) {
 func (s *BaseService) RemoveProcessor(cmd uint16) error {
 	_, ok := s.mapCmd2Processor[cmd]
 	if !ok {
-		return s.errCatcher.Throw("RemoveProcessor", ErrProcNotExist)
+		return s.ec.Throw("RemoveProcessor", ErrProcNotExist)
 	}
 
 	delete(s.mapCmd2Processor, cmd)
@@ -136,7 +136,7 @@ func (s *BaseService) RemoveProcessor(cmd uint16) error {
 //================================================
 func (s *BaseService) OnHandleRequest(req *Request, resp *Response, bDebugMode bool) (int32, error) {
 	var err error = nil
-	defer s.errCatcher.DeferThrow("OnHandleRequest", &err)
+	defer s.ec.DeferThrow("OnHandleRequest", &err)
 
 	processor, ok := s.GetProcessor(req.Cmd)
 	if !ok {

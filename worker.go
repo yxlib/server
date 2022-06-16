@@ -41,26 +41,26 @@ func NewRequestInfo(req *Request, resp *Response) *RequestInfo {
 }
 
 type SessionWorker struct {
-	id         uint64
-	requests   chan *RequestInfo
-	tasks      chan SessionTask
-	evtExit    *yx.Event
-	owner      WorkerOwner
-	lckStop    *sync.Mutex
-	bStop      bool
-	errCatcher *yx.ErrCatcher
+	id       uint64
+	requests chan *RequestInfo
+	tasks    chan SessionTask
+	evtExit  *yx.Event
+	owner    WorkerOwner
+	lckStop  *sync.Mutex
+	bStop    bool
+	ec       *yx.ErrCatcher
 }
 
 func NewSessionWorker(id uint64, owner WorkerOwner, maxRequestNum uint16, maxTaskNum uint16) *SessionWorker {
 	return &SessionWorker{
-		id:         id,
-		requests:   make(chan *RequestInfo, maxRequestNum),
-		tasks:      make(chan SessionTask, maxTaskNum),
-		evtExit:    yx.NewEvent(),
-		owner:      owner,
-		lckStop:    &sync.Mutex{},
-		bStop:      false,
-		errCatcher: yx.NewErrCatcher("SessionWorker"),
+		id:       id,
+		requests: make(chan *RequestInfo, maxRequestNum),
+		tasks:    make(chan SessionTask, maxTaskNum),
+		evtExit:  yx.NewEvent(),
+		owner:    owner,
+		lckStop:  &sync.Mutex{},
+		bStop:    false,
+		ec:       yx.NewErrCatcher("SessionWorker"),
 	}
 }
 
@@ -99,7 +99,7 @@ func (w *SessionWorker) WaitExit() {
 
 func (w *SessionWorker) AddRequest(r *RequestInfo) error {
 	var err error = nil
-	defer w.errCatcher.DeferThrow("PushRequest", &err)
+	defer w.ec.DeferThrow("PushRequest", &err)
 
 	if r == nil {
 		err = ErrRequestNil
@@ -122,7 +122,7 @@ func (w *SessionWorker) AddRequest(r *RequestInfo) error {
 
 func (w *SessionWorker) AddTask(t SessionTask) error {
 	var err error = nil
-	defer w.errCatcher.DeferThrow("AddTask", &err)
+	defer w.ec.DeferThrow("AddTask", &err)
 
 	if t == nil {
 		err = ErrTaskNil
@@ -187,7 +187,7 @@ func (w *SessionWorker) handleTask(t SessionTask, ok bool) bool {
 
 	err := t.Exec(w)
 	if err != nil {
-		w.errCatcher.Catch("handleTask", &err)
+		w.ec.Catch("handleTask", &err)
 	}
 
 	return false
