@@ -56,6 +56,8 @@ type InterceptorList = []Interceptor
 type Server interface {
 	AddService(srv Service, mod uint16) error
 	UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16)
+	Start()
+	Stop()
 }
 
 type BaseServer struct {
