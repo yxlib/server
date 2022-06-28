@@ -54,7 +54,6 @@ type Interceptor interface {
 type InterceptorList = []Interceptor
 
 type Server interface {
-	GetNet() Net
 	AddService(srv Service, mod uint16) error
 	UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16)
 	Start()
