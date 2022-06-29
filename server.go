@@ -402,11 +402,13 @@ func (s *BaseServer) intercept(step uint8, req *Request, resp *Response) (int32,
 		return code, s.ec.Throw("intercept", err)
 	}
 
-	list, ok := s.mapMod2Interceptors[req.Mod]
-	if ok {
-		code, err := s.listInterceptHandle(list, step, req, resp)
-		if err != nil {
-			return code, s.ec.Throw("intercept", err)
+	if req != nil {
+		list, ok := s.mapMod2Interceptors[req.Mod]
+		if ok {
+			code, err := s.listInterceptHandle(list, step, req, resp)
+			if err != nil {
+				return code, s.ec.Throw("intercept", err)
+			}
 		}
 	}
 
@@ -415,11 +417,13 @@ func (s *BaseServer) intercept(step uint8, req *Request, resp *Response) (int32,
 
 func (s *BaseServer) reverseIntercept(step uint8, req *Request, resp *Response) (int32, error) {
 	// mod first, reverse visit
-	list, ok := s.mapMod2Interceptors[req.Mod]
-	if ok {
-		code, err := s.reverseListInterceptHandle(list, step, req, resp)
-		if err != nil {
-			return code, s.ec.Throw("reverseIntercept", err)
+	if req != nil {
+		list, ok := s.mapMod2Interceptors[req.Mod]
+		if ok {
+			code, err := s.reverseListInterceptHandle(list, step, req, resp)
+			if err != nil {
+				return code, s.ec.Throw("reverseIntercept", err)
+			}
 		}
 	}
 
