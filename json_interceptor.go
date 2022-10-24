@@ -6,9 +6,18 @@ package server
 
 import (
 	"encoding/json"
+
+	"github.com/yxlib/yx"
 )
 
 type JsonInterceptor struct {
+	ec *yx.ErrCatcher
+}
+
+func NewJsonInterceptor() *JsonInterceptor {
+	return &JsonInterceptor{
+		ec: yx.NewErrCatcher("JsonInterceptor"),
+	}
 }
 
 func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, error) {
@@ -20,15 +29,15 @@ func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, erro
 
 	// v := reflect.New(reqType)
 	// reqData := v.Interface()
-	if req.Payload != nil {
+	if len(req.Payload) > 0 {
 		reqData, err := ProtoBinder.GetRequest(req.Mod, req.Cmd)
 		if err != nil {
-			return RESP_CODE_NOT_SUPPORT_PROTO, err
+			return RESP_CODE_NOT_SUPPORT_PROTO, i.ec.Throw("OnPreHandle", err)
 		}
 
 		err = json.Unmarshal(req.Payload, reqData)
 		if err != nil {
-			return RESP_CODE_UNMARSHAL_REQ_FAILED, err
+			return RESP_CODE_UNMARSHAL_REQ_FAILED, i.ec.Throw("OnPreHandle", err)
 		}
 
 		req.ExtData = reqData
@@ -62,7 +71,7 @@ func (i *JsonInterceptor) OnHandleCompletion(req *Request, resp *Response) (int3
 
 	respPayload, err := json.Marshal(resp.ExtData)
 	if err != nil {
-		return RESP_CODE_MARSHAL_RESP_FAILED, err
+		return RESP_CODE_MARSHAL_RESP_FAILED, i.ec.Throw("OnHandleCompletion", err)
 	}
 
 	resp.Payload = respPayload
