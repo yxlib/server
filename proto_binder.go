@@ -62,23 +62,21 @@ func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, res
 		return b.ec.Throw("BindProto", ErrProtoBindProtoExist)
 	}
 
-	_, ok = b.factory.GetReflectType(reqProtoName)
-	if !ok {
-		return b.ec.Throw("BindProto", ErrProtoBindProtoNotExist)
-	}
-
 	_, ok = b.mapProtoNo2RespName[protoNo]
 	if ok {
 		return b.ec.Throw("BindProto", ErrProtoBindProtoExist)
 	}
 
-	_, ok = b.factory.GetReflectType(respProtoName)
-	if !ok {
-		return b.ec.Throw("BindProto", ErrProtoBindProtoNotExist)
+	_, ok = b.factory.GetReflectType(reqProtoName)
+	if ok {
+		b.mapProtoNo2ReqName[protoNo] = reqProtoName
 	}
 
-	b.mapProtoNo2ReqName[protoNo] = reqProtoName
-	b.mapProtoNo2RespName[protoNo] = respProtoName
+	_, ok = b.factory.GetReflectType(respProtoName)
+	if ok {
+		b.mapProtoNo2RespName[protoNo] = respProtoName
+	}
+
 	return nil
 }
 

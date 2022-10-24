@@ -44,16 +44,22 @@ func (i *JsonInterceptor) OnPreHandle(req *Request, resp *Response) (int32, erro
 	// resp.ExtData = v.Interface()
 
 	respData, err := ProtoBinder.GetResponse(resp.Mod, resp.Cmd)
-	if err != nil {
-		return RESP_CODE_NOT_SUPPORT_PROTO, err
+	if err == nil {
+		resp.ExtData = respData
+		// return RESP_CODE_NOT_SUPPORT_PROTO, err
 	}
 
-	resp.ExtData = respData
+	// resp.ExtData = respData
 
 	return 0, nil
 }
 
 func (i *JsonInterceptor) OnHandleCompletion(req *Request, resp *Response) (int32, error) {
+	if resp.ExtData == nil {
+		resp.Payload = []byte("")
+		return 0, nil
+	}
+
 	respPayload, err := json.Marshal(resp.ExtData)
 	if err != nil {
 		return RESP_CODE_MARSHAL_RESP_FAILED, err
@@ -64,11 +70,11 @@ func (i *JsonInterceptor) OnHandleCompletion(req *Request, resp *Response) (int3
 }
 
 func (i *JsonInterceptor) OnResponseCompletion(req *Request, resp *Response) error {
-	if req != nil {
+	if req != nil && req.ExtData != nil {
 		ProtoBinder.ReuseRequest(req.ExtData, req.Mod, req.Cmd)
 	}
 
-	if resp != nil {
+	if resp != nil && resp.ExtData != nil {
 		ProtoBinder.ReuseResponse(resp.ExtData, resp.Mod, resp.Cmd)
 	}
 
