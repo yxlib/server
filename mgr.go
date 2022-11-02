@@ -86,17 +86,23 @@ func (m *SessionMgr) GetWorker(id uint64) (*SessionWorker, bool) {
 	return worker, ok
 }
 
-/*
- notice!!
- never do block or long time operate with this method.
-*/
 func (m *SessionMgr) ForEachWorker(cb func(wid uint64, w *SessionWorker)) {
+	workers := m.cloneWorkers()
+	for _, worker := range workers {
+		cb(worker.GetID(), worker)
+	}
+}
+
+func (m *SessionMgr) cloneWorkers() []*SessionWorker {
 	m.lckWorker.RLock()
 	defer m.lckWorker.RUnlock()
 
-	for wid, worker := range m.mapID2Worker {
-		cb(wid, worker)
+	workers := make([]*SessionWorker, 0, len(m.mapID2Worker))
+	for _, worker := range m.mapID2Worker {
+		workers = append(workers, worker)
 	}
+
+	return workers
 }
 
 func (m *SessionMgr) stopAllWorkers() {

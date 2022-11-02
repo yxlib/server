@@ -157,6 +157,14 @@ func (s *BaseServer) UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16) {
 	s.mgr = NewSessionMgr(maxRequestNum, maxTaskNum)
 }
 
+func (s *BaseServer) GetWorker(id uint64) (*SessionWorker, bool) {
+	return s.mgr.GetWorker(id)
+}
+
+func (s *BaseServer) ForEachWorker(cb func(wid uint64, w *SessionWorker)) {
+	s.mgr.ForEachWorker(cb)
+}
+
 // Remove a worker.
 // @param id, id of the worker.
 func (s *BaseServer) RemoveWorker(id uint64) {
@@ -498,7 +506,7 @@ func (s *BaseServer) handleRequest(req *Request, resp *Response) error {
 	err = s.srvNet.WriteResponse(resp)
 	if err != nil {
 		s.ec.Catch("handleRequest", &err)
-		return err
+		// return err
 	}
 
 	// handle response completion
