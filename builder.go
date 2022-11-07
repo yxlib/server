@@ -22,9 +22,13 @@ var Builder = &builder{
 // @param srv, dest server.
 // @param cfg, the server config.
 func (b *builder) Build(srv Server, cfg *Config) {
-	srv.UseWorkerMode(cfg.MaxReqNum, cfg.MaxTaskNum)
+	if cfg.IsUseWorkerMode {
+		srv.UseWorkerMode(cfg.MaxReqNum, cfg.MaxTaskNum)
+	}
 
+	cfg.MapName2Service = make(map[string]*ServiceConf)
 	for _, servCfg := range cfg.Services {
+		cfg.MapName2Service[servCfg.Name] = servCfg
 		b.parsePatternCfg(srv, servCfg)
 	}
 }
@@ -43,19 +47,21 @@ func (b *builder) parsePatternCfg(srv Server, servCfg *ServiceConf) {
 func (b *builder) parseProcCfg(s Service, servCfg *ServiceConf) {
 	v := reflect.ValueOf(s)
 
+	servCfg.MapName2Proc = make(map[string]*ProcConf)
 	for _, cfg := range servCfg.Processors {
 		// proto
-		if cfg.Req != "" && cfg.Resp != "" {
-			err := ProtoBinder.BindProto(servCfg.Mod, cfg.Cmd, cfg.Req, cfg.Resp)
-			if err != nil {
-				b.logger.W("not support processor ", cfg.Handler)
-				continue
-			}
+		// if cfg.Req != "" && cfg.Resp != "" {
+		err := ProtoBinder.BindProto(servCfg.Mod, cfg.Cmd, cfg.Req, cfg.Resp)
+		if err != nil {
+			b.logger.W("not support processor ", cfg.Handler)
+			continue
 		}
+		// }
+		servCfg.MapName2Proc[cfg.Name] = cfg
 
 		// processor
 		m := v.MethodByName(cfg.Handler)
-		err := s.AddReflectProcessor(m, cfg.Cmd)
+		err = s.AddReflectProcessor(m, cfg.Cmd)
 		if err != nil {
 			b.logger.E("AddReflectProcessor err: ", err)
 			b.logger.W("not support processor ", cfg.Handler)

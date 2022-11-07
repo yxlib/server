@@ -13,16 +13,19 @@ type ProcConf struct {
 }
 
 type ServiceConf struct {
-	Name       string      `json:"name"`
-	Service    string      `json:"service"`
-	Mod        uint16      `json:"mod"`
-	Processors []*ProcConf `json:"processors"`
+	Name         string      `json:"name"`
+	Service      string      `json:"service"`
+	Mod          uint16      `json:"mod"`
+	Processors   []*ProcConf `json:"processors"`
+	MapName2Proc map[string]*ProcConf
 }
 
 type Config struct {
-	MaxReqNum  uint16         `json:"max_req_num"`
-	MaxTaskNum uint16         `json:"max_task_num"`
-	Services   []*ServiceConf `json:"services"`
+	IsUseWorkerMode bool           `json:"use_worker_mode"`
+	MaxReqNum       uint16         `json:"max_req_num"`
+	MaxTaskNum      uint16         `json:"max_task_num"`
+	Services        []*ServiceConf `json:"services"`
+	MapName2Service map[string]*ServiceConf
 }
 
 var CfgInst *Config = &Config{}

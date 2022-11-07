@@ -1,4 +1,5 @@
 {
+    "use_worker_mode" : true,
     "max_req_num" : 10,
     "max_task_num" : 10,
     "services" :
