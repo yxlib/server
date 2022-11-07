@@ -5,6 +5,7 @@
 package server
 
 type ProcConf struct {
+	Name    string `json:"name"`
 	Cmd     uint16 `json:"cmd"`
 	Req     string `json:"req"`
 	Resp    string `json:"resp"`
@@ -24,3 +25,15 @@ type Config struct {
 }
 
 var CfgInst *Config = &Config{}
+
+func (c *Config) GetProcName2Proto() map[string]uint16 {
+	procName2Proto := make(map[string]uint16)
+	for _, service := range c.Services {
+		for _, proc := range service.Processors {
+			protoNo := GetProtoNo(service.Mod, proc.Cmd)
+			procName2Proto[proc.Name] = protoNo
+		}
+	}
+
+	return procName2Proto
+}
