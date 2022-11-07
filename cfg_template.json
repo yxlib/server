@@ -4,6 +4,7 @@
     "services" :
     [
         {
+            "name" : "example",
             "service" : "github.com/yxlib/server.ExampleService",
             "mod" : 1,
             "processors" :

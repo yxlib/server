@@ -13,6 +13,7 @@ type ProcConf struct {
 }
 
 type ServiceConf struct {
+	Name       string      `json:"name"`
 	Service    string      `json:"service"`
 	Mod        uint16      `json:"mod"`
 	Processors []*ProcConf `json:"processors"`
