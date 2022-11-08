@@ -5,6 +5,7 @@
 package server
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/yxlib/yx"
@@ -22,49 +23,70 @@ var Builder = &builder{
 // @param srv, dest server.
 // @param cfg, the server config.
 func (b *builder) Build(srv Server, cfg *Config) {
+	if cfg.IsAutoModCmd {
+		b.genAutoModCmd(srv, cfg)
+	}
+
 	if cfg.IsUseWorkerMode {
 		srv.UseWorkerMode(cfg.MaxReqNum, cfg.MaxTaskNum)
 	}
 
-	cfg.MapName2Service = make(map[string]*ServiceConf)
-	for _, servCfg := range cfg.Services {
-		cfg.MapName2Service[servCfg.Name] = servCfg
-		b.parsePatternCfg(srv, servCfg)
+	// cfg.MapName2Service = make(map[string]*ServiceConf)
+	cfg.MapProcName2ProtoNo = make(map[string]uint16)
+	for _, serviceCfg := range cfg.Services {
+		b.BuildService(srv, cfg, serviceCfg)
 	}
 }
 
-func (b *builder) parsePatternCfg(srv Server, servCfg *ServiceConf) {
-	s, ok := ServiceBinder.GetService(servCfg.Service)
+func (b *builder) BuildService(srv Server, cfg *Config, serviceCfg *ServiceConf) {
+	s, ok := ServiceBinder.GetService(serviceCfg.Service)
 	if !ok {
-		b.logger.W("Not support service ", servCfg.Service)
+		b.logger.W("Not support service ", serviceCfg.Service)
 		return
 	}
 
-	srv.AddService(s, servCfg.Mod)
-	b.parseProcCfg(s, servCfg)
+	// cfg.MapName2Service[serviceCfg.Name] = serviceCfg
+	srv.AddService(s, serviceCfg.Mod)
+	b.buildProcessor(s, cfg, serviceCfg)
 }
 
-func (b *builder) parseProcCfg(s Service, servCfg *ServiceConf) {
+func (b *builder) genAutoModCmd(srv Server, cfg *Config) {
+	mod := uint16(1)
+	for _, service := range cfg.Services {
+		service.Mod = mod
+		mod++
+
+		cmd := uint16(1)
+		for _, proc := range service.Processors {
+			proc.Cmd = cmd
+			cmd++
+		}
+	}
+}
+
+func (b *builder) buildProcessor(s Service, cfg *Config, serviceCfg *ServiceConf) {
 	v := reflect.ValueOf(s)
 
-	servCfg.MapName2Proc = make(map[string]*ProcConf)
-	for _, cfg := range servCfg.Processors {
+	// serviceCfg.MapName2Proc = make(map[string]*ProcConf)
+	for _, procCfg := range serviceCfg.Processors {
 		// proto
 		// if cfg.Req != "" && cfg.Resp != "" {
-		err := ProtoBinder.BindProto(servCfg.Mod, cfg.Cmd, cfg.Req, cfg.Resp)
+		err := ProtoBinder.BindProto(serviceCfg.Mod, procCfg.Cmd, procCfg.Req, procCfg.Resp)
 		if err != nil {
-			b.logger.W("not support processor ", cfg.Handler)
+			b.logger.W("not support processor ", procCfg.Handler)
 			continue
 		}
 		// }
-		servCfg.MapName2Proc[cfg.Name] = cfg
+		// serviceCfg.MapName2Proc[procCfg.Name] = procCfg
+		procFullName := fmt.Sprintf("%s.%s", serviceCfg.Name, procCfg.Name)
+		cfg.MapProcName2ProtoNo[procFullName] = GetProtoNo(serviceCfg.Mod, procCfg.Cmd)
 
 		// processor
-		m := v.MethodByName(cfg.Handler)
-		err = s.AddReflectProcessor(m, cfg.Cmd)
+		m := v.MethodByName(procCfg.Handler)
+		err = s.AddReflectProcessor(m, procCfg.Cmd)
 		if err != nil {
 			b.logger.E("AddReflectProcessor err: ", err)
-			b.logger.W("not support processor ", cfg.Handler)
+			b.logger.W("not support processor ", procCfg.Handler)
 			continue
 		}
 	}

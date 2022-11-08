@@ -34,9 +34,10 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 	f.WriteString("// Auto generate by tool.\n")
 	f.WriteString("func RegisterServices() {\n")
 
+	objectSet := yx.NewSet(yx.SET_TYPE_OBJ)
 	for _, servCfg := range srvCfg.Services {
 		f.WriteString("    //===============================\n")
-		f.WriteString("    //        " + servCfg.Service + "\n")
+		f.WriteString("    //        " + servCfg.Name + "\n")
 		f.WriteString("    //===============================\n")
 
 		servStr := servCfg.Service
@@ -49,25 +50,27 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 		servStr = servStr[idx+1:]
 		f.WriteString("    server.ServiceBinder.BindService(" + packName + ".New" + servStr + "())\n")
 		for _, cfg := range servCfg.Processors {
-			if cfg.Req == "" || cfg.Resp == "" {
-				continue
+			// if cfg.Req == "" || cfg.Resp == "" {
+			// 	continue
+			// }
+
+			f.WriteString("    // " + cfg.Name + "\n")
+
+			if cfg.Req != "" {
+				reqStr := getFilePackageClassName(cfg.Req, regPackName)
+				if !objectSet.Exist(reqStr) {
+					f.WriteString("    server.ProtoBinder.RegisterProto(&" + reqStr + "{})\n")
+					objectSet.Add(reqStr)
+				}
 			}
 
-			f.WriteString("    // " + cfg.Handler + "\n")
-
-			reqStr := cfg.Req
-			idx := strings.LastIndex(reqStr, "/")
-			if idx >= 0 {
-				reqStr = reqStr[idx+1:]
+			if cfg.Resp != "" {
+				respStr := getFilePackageClassName(cfg.Resp, regPackName)
+				if !objectSet.Exist(respStr) {
+					f.WriteString("    server.ProtoBinder.RegisterProto(&" + respStr + "{})\n")
+					objectSet.Add(respStr)
+				}
 			}
-			f.WriteString("    server.ProtoBinder.RegisterProto(&" + reqStr + "{})\n")
-
-			respStr := cfg.Resp
-			idx = strings.LastIndex(respStr, "/")
-			if idx >= 0 {
-				respStr = respStr[idx+1:]
-			}
-			f.WriteString("    server.ProtoBinder.RegisterProto(&" + respStr + "{})\n")
 		}
 
 		f.WriteString("\n")
@@ -75,6 +78,17 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 
 	f.WriteString("}")
 
+}
+
+func getFilePackageClassName(classReflectName string, regPackName string) string {
+	fullPackName := yx.GetFullPackageName(classReflectName)
+	filePackName := yx.GetFilePackageName(fullPackName)
+
+	if filePackName == regPackName {
+		return yx.GetClassName(classReflectName)
+	}
+
+	return yx.GetFilePackageClassName(classReflectName)
 }
 
 func writePackage(f *os.File, regPackName string) {

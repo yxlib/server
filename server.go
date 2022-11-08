@@ -265,10 +265,18 @@ func (s *BaseServer) RemoveModInterceptor(it Interceptor, mod uint16) error {
 // Start server loop, it will read request actively.
 func (s *BaseServer) Start() {
 	for {
-		err := s.loop()
-		if err == ErrSrvNetClose {
+		req, err := s.srvNet.ReadRequest()
+		if err != nil {
 			break
 		}
+
+		resp := NewResponse(req)
+		s.HandleRequest(req, resp)
+
+		// err := s.loop()
+		// if err == ErrSrvNetClose {
+		// 	break
+		// }
 	}
 
 	s.evtExit.Send()
@@ -312,36 +320,59 @@ func (s *BaseServer) Stop() {
 	s.evtExit.Wait()
 }
 
-// Handle a http request.
+// Handle a request.
 // @param req, the request.
 // @param resp, the response for this request.
 // @return error, error.
-func (s *BaseServer) HandleHttpRequest(req *Request, resp *Response) error {
+func (s *BaseServer) HandleRequest(req *Request, resp *Response) error {
 	code, err := s.preHandle(req, resp)
 	if err != nil {
 		resp.Code = code
-		s.ec.Catch("HandleHttpRequest", &err)
-		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
+		s.ec.Catch("HandleRequest", &err)
+		s.logger.E("PreHandle failed!! (", req.Mod, ", ", req.Cmd, "): SNo. ", req.SerialNo, ", resCode ", resp.Code)
+
+		if s.srvNet != nil {
+			s.srvNet.WriteResponse(resp)
+		}
 		return err
 	}
 
-	err = s.handleRequestImpl(req, resp)
-	if err != nil {
-		s.ec.Catch("HandleHttpRequest", &err)
+	if !s.bWorkerMode {
+		err = s.handleRequestDirect(req, resp)
+	} else {
+		err = s.addRequest2Worker(req, resp)
 	}
 
-	if resp.Code != RESP_CODE_SUCCESS {
-		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
-	}
-
-	// handle response completion
-	err2 := s.responseCompletion(req, resp)
-	if err2 != nil {
-		s.ec.Catch("HandleHttpRequest", &err2)
-	}
-
+	s.ec.Catch("HandleRequest", &err)
 	return err
 }
+
+// func (s *BaseServer) HandleHttpRequest(req *Request, resp *Response) error {
+// 	code, err := s.preHandle(req, resp)
+// 	if err != nil {
+// 		resp.Code = code
+// 		s.ec.Catch("HandleHttpRequest", &err)
+// 		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
+// 		return err
+// 	}
+
+// 	err = s.handleRequestImpl(req, resp)
+// 	if err != nil {
+// 		s.ec.Catch("HandleHttpRequest", &err)
+// 	}
+
+// 	if resp.Code != RESP_CODE_SUCCESS {
+// 		s.logger.E("Http request (", req.Mod, ", ", req.Cmd, "): serial No. ", req.SerialNo, ", resCode ", resp.Code)
+// 	}
+
+// 	// handle response completion
+// 	err2 := s.responseCompletion(req, resp)
+// 	if err2 != nil {
+// 		s.ec.Catch("HandleHttpRequest", &err2)
+// 	}
+
+// 	return err
+// }
 
 //================================================
 //                 WorkerOwner
@@ -352,7 +383,9 @@ func (s *BaseServer) OnWorkerClose(w *SessionWorker) {
 }
 
 func (s *BaseServer) OnHandleRequest(w *SessionWorker, req *Request, resp *Response) error {
-	return s.handleRequest(req, resp)
+	err := s.handleRequestDirect(req, resp)
+	s.ec.Catch("OnHandleRequest", &err)
+	return err
 }
 
 //================================================
@@ -458,64 +491,69 @@ func (s *BaseServer) responseCompletion(req *Request, resp *Response) error {
 	return s.ec.Throw("responseCompletion", err)
 }
 
-func (s *BaseServer) loop() error {
-	req, err := s.srvNet.ReadRequest()
-	if err != nil {
-		return ErrSrvNetClose
-	}
+// func (s *BaseServer) loop() error {
+// 	req, err := s.srvNet.ReadRequest()
+// 	if err != nil {
+// 		return ErrSrvNetClose
+// 	}
 
-	resp := NewResponse(req)
+// 	resp := NewResponse(req)
 
-	code, err := s.preHandle(req, resp)
-	if err != nil {
-		resp.Code = code
-		s.ec.Catch("loop", &err)
-		s.logger.E("PreHandle failed!! (", req.Mod, ", ", req.Cmd, "): SNo. ", req.SerialNo, ", resCode ", resp.Code)
+// 	code, err := s.preHandle(req, resp)
+// 	if err != nil {
+// 		resp.Code = code
+// 		s.ec.Catch("loop", &err)
+// 		s.logger.E("PreHandle failed!! (", req.Mod, ", ", req.Cmd, "): SNo. ", req.SerialNo, ", resCode ", resp.Code)
 
-		s.srvNet.WriteResponse(resp)
-		return err
-	}
+// 		s.srvNet.WriteResponse(resp)
+// 		return err
+// 	}
 
-	if !s.bWorkerMode {
-		err = s.handleRequest(req, resp)
-		return err
-	}
+// 	if !s.bWorkerMode {
+// 		err = s.handleRequest(req, resp)
+// 		return err
+// 	}
 
-	worker, ok := s.mgr.GetWorker(req.ConnId)
-	if !ok || worker.IsStop() {
-		worker = s.mgr.AddWorker(req.ConnId, s)
-	}
+// 	worker, ok := s.mgr.GetWorker(req.ConnId)
+// 	if !ok || worker.IsStop() {
+// 		worker = s.mgr.AddWorker(req.ConnId, s)
+// 	}
 
-	reqInfo := NewRequestInfo(req, resp)
-	err = worker.AddRequest(reqInfo)
-	if err != nil {
-		s.ec.Catch("loop", &err)
-		s.mgr.RemoveWorker(req.ConnId)
-	}
+// 	reqInfo := NewRequestInfo(req, resp)
+// 	err = worker.AddRequest(reqInfo)
+// 	if err != nil {
+// 		s.ec.Catch("loop", &err)
+// 		s.mgr.RemoveWorker(req.ConnId)
+// 	}
 
-	return err
-}
+// 	return err
+// }
 
-func (s *BaseServer) handleRequest(req *Request, resp *Response) error {
+func (s *BaseServer) handleRequestDirect(req *Request, resp *Response) error {
 	err := s.handleRequestImpl(req, resp)
-	if err != nil {
-		s.ec.Catch("handleRequest", &err)
+	// if err != nil {
+	// 	s.ec.Catch("handleRequest", &err)
+	// }
+
+	if resp.Code != RESP_CODE_SUCCESS {
 		s.logger.E("Request (", req.Mod, ", ", req.Cmd, "): SNo. ", req.SerialNo, ", resCode ", resp.Code)
 	}
 
-	err = s.srvNet.WriteResponse(resp)
-	if err != nil {
-		s.ec.Catch("handleRequest", &err)
-		// return err
+	if s.srvNet != nil {
+		err2 := s.srvNet.WriteResponse(resp)
+		if err2 != nil {
+			s.ec.Catch("handleRequestDirect", &err2)
+			// return err
+		}
 	}
 
 	// handle response completion
-	err = s.responseCompletion(req, resp)
-	if err != nil {
-		s.ec.Catch("handleRequest", &err)
+	err2 := s.responseCompletion(req, resp)
+	if err2 != nil {
+		s.ec.Catch("handleRequestDirect", &err2)
 	}
 
-	return err
+	return s.ec.Throw("handleRequestDirect", err)
 }
 
 func (s *BaseServer) handleRequestImpl(req *Request, resp *Response) error {
@@ -544,4 +582,20 @@ func (s *BaseServer) handleRequestImpl(req *Request, resp *Response) error {
 	}
 
 	return nil
+}
+
+func (s *BaseServer) addRequest2Worker(req *Request, resp *Response) error {
+	worker, ok := s.mgr.GetWorker(req.ConnId)
+	if !ok || worker.IsStop() {
+		worker = s.mgr.AddWorker(req.ConnId, s)
+	}
+
+	reqInfo := NewRequestInfo(req, resp)
+	err := worker.AddRequest(reqInfo)
+	if err != nil {
+		// s.ec.Catch("addRequest2Worker", &err)
+		s.mgr.RemoveWorker(req.ConnId)
+	}
+
+	return s.ec.Throw("addRequest2Worker", err)
 }
