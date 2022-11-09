@@ -5,6 +5,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -54,14 +55,22 @@ type Interceptor interface {
 type InterceptorList = []Interceptor
 
 type Server interface {
+	SetEnumerable(protoNo uint16, mapProcName2ProtoNo map[string]uint16)
 	AddService(srv Service, mod uint16) error
 	UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16)
+}
+
+type EnumerationResp struct {
+	MapProcName2ProtoNo map[string]uint16 `json:"func_mapper"`
 }
 
 type BaseServer struct {
 	name                string
 	bDebugMode          bool
 	srvNet              Net
+	bEnumerable         bool
+	enumProtoNo         uint16
+	mapProcName2ProtoNo map[string]uint16
 	mapMod2Service      map[uint16]Service
 	globalInterceptors  InterceptorList
 	mapMod2Interceptors map[uint16]InterceptorList
@@ -80,6 +89,9 @@ func NewBaseServer(name string, srvNet Net) *BaseServer {
 		name:                name,
 		bDebugMode:          false,
 		srvNet:              srvNet,
+		bEnumerable:         false,
+		enumProtoNo:         0,
+		mapProcName2ProtoNo: nil,
 		mapMod2Service:      make(map[uint16]Service),
 		globalInterceptors:  make(InterceptorList, 0),
 		mapMod2Interceptors: make(map[uint16]InterceptorList),
@@ -96,6 +108,14 @@ func NewBaseServer(name string, srvNet Net) *BaseServer {
 
 func (s *BaseServer) GetNet() Net {
 	return s.srvNet
+}
+
+func (s *BaseServer) SetEnumerable(protoNo uint16, mapProcName2ProtoNo map[string]uint16) {
+	if len(mapProcName2ProtoNo) > 0 {
+		s.bEnumerable = true
+		s.enumProtoNo = protoNo
+		s.mapProcName2ProtoNo = mapProcName2ProtoNo
+	}
 }
 
 // Add a service bind with module mod.
@@ -325,6 +345,10 @@ func (s *BaseServer) Stop() {
 // @param resp, the response for this request.
 // @return error, error.
 func (s *BaseServer) HandleRequest(req *Request, resp *Response) error {
+	if s.isEnumReq(req) {
+		return s.handleEnumReq(req, resp)
+	}
+
 	code, err := s.preHandle(req, resp)
 	if err != nil {
 		resp.Code = code
@@ -598,4 +622,35 @@ func (s *BaseServer) addRequest2Worker(req *Request, resp *Response) error {
 	}
 
 	return s.ec.Throw("addRequest2Worker", err)
+}
+
+func (s *BaseServer) isEnumReq(req *Request) bool {
+	if !s.bEnumerable {
+		return false
+	}
+
+	protoNo := GetProtoNo(req.Mod, req.Cmd)
+	return (s.enumProtoNo == protoNo)
+}
+
+func (s *BaseServer) handleEnumReq(req *Request, resp *Response) error {
+	respObj := &EnumerationResp{
+		MapProcName2ProtoNo: s.mapProcName2ProtoNo,
+	}
+
+	data, err := json.Marshal(respObj)
+	if err != nil {
+		return err
+	}
+
+	resp.Payload = data
+
+	if s.srvNet != nil {
+		err2 := s.srvNet.WriteResponse(resp)
+		if err2 != nil {
+			s.ec.Catch("handleEnumReq", &err2)
+		}
+	}
+
+	return nil
 }

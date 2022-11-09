@@ -25,6 +25,8 @@ type Config struct {
 	MaxReqNum       uint16         `json:"max_req_num"`
 	MaxTaskNum      uint16         `json:"max_task_num"`
 	IsAutoModCmd    bool           `json:"auto_mod_cmd"`
+	IsEnumerable    bool           `json:"enumerable"`
+	EnumProtoNo     uint16         `json:"enum_protoNo"`
 	Services        []*ServiceConf `json:"services"`
 	// MapName2Service     map[string]*ServiceConf
 	MapProcName2ProtoNo map[string]uint16
