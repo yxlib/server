@@ -37,9 +37,7 @@ func (b *builder) Build(srv Server, cfg *Config) {
 		b.BuildService(srv, cfg, serviceCfg)
 	}
 
-	if cfg.IsEnumerable {
-		srv.SetEnumerable(cfg.EnumProtoNo, cfg.MapProcName2ProtoNo)
-	}
+	srv.SetEnumerable(cfg.IsEnumerable, cfg.EnumProtoNo, cfg.MapProcName2ProtoNo)
 }
 
 func (b *builder) BuildService(srv Server, cfg *Config, serviceCfg *ServiceConf) {

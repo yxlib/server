@@ -55,7 +55,7 @@ type Interceptor interface {
 type InterceptorList = []Interceptor
 
 type Server interface {
-	SetEnumerable(protoNo uint16, mapProcName2ProtoNo map[string]uint16)
+	SetEnumerable(bEnumerable bool, protoNo uint16, mapProcName2ProtoNo map[string]uint16)
 	AddService(srv Service, mod uint16) error
 	UseWorkerMode(maxRequestNum uint16, maxTaskNum uint16)
 }
@@ -110,12 +110,14 @@ func (s *BaseServer) GetNet() Net {
 	return s.srvNet
 }
 
-func (s *BaseServer) SetEnumerable(protoNo uint16, mapProcName2ProtoNo map[string]uint16) {
-	if len(mapProcName2ProtoNo) > 0 {
-		s.bEnumerable = true
-		s.enumProtoNo = protoNo
-		s.mapProcName2ProtoNo = mapProcName2ProtoNo
-	}
+func (s *BaseServer) SetEnumerable(bEnumerable bool, protoNo uint16, mapProcName2ProtoNo map[string]uint16) {
+	s.enumProtoNo = protoNo
+	s.mapProcName2ProtoNo = mapProcName2ProtoNo
+	s.bEnumerable = (bEnumerable && len(mapProcName2ProtoNo) > 0)
+}
+
+func (s *BaseServer) GetProcMapper() map[string]uint16 {
+	return s.mapProcName2ProtoNo
 }
 
 // Add a service bind with module mod.
