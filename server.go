@@ -71,6 +71,7 @@ type BaseServer struct {
 	bEnumerable         bool
 	enumProtoNo         uint16
 	mapProcName2ProtoNo map[string]uint16
+	mapProtoNo2ProcName map[uint16]string
 	mapMod2Service      map[uint16]Service
 	globalInterceptors  InterceptorList
 	mapMod2Interceptors map[uint16]InterceptorList
@@ -92,6 +93,7 @@ func NewBaseServer(name string, srvNet Net) *BaseServer {
 		bEnumerable:         false,
 		enumProtoNo:         0,
 		mapProcName2ProtoNo: nil,
+		mapProtoNo2ProcName: nil,
 		mapMod2Service:      make(map[uint16]Service),
 		globalInterceptors:  make(InterceptorList, 0),
 		mapMod2Interceptors: make(map[uint16]InterceptorList),
@@ -114,6 +116,11 @@ func (s *BaseServer) SetEnumerable(bEnumerable bool, protoNo uint16, mapProcName
 	s.enumProtoNo = protoNo
 	s.mapProcName2ProtoNo = mapProcName2ProtoNo
 	s.bEnumerable = (bEnumerable && len(mapProcName2ProtoNo) > 0)
+
+	s.mapProtoNo2ProcName = make(map[uint16]string)
+	for procName, protoNo := range s.mapProcName2ProtoNo {
+		s.mapProtoNo2ProcName[protoNo] = procName
+	}
 }
 
 func (s *BaseServer) GetProcMapper() map[string]uint16 {
@@ -556,13 +563,17 @@ func (s *BaseServer) responseCompletion(req *Request, resp *Response) error {
 // }
 
 func (s *BaseServer) handleRequestDirect(req *Request, resp *Response) error {
+	s.printRequestInfo(req)
+
 	err := s.handleRequestImpl(req, resp)
 	// if err != nil {
 	// 	s.ec.Catch("handleRequest", &err)
 	// }
 
 	if resp.Code != RESP_CODE_SUCCESS {
-		s.logger.E("Request (", req.Mod, ", ", req.Cmd, "): SNo. ", req.SerialNo, ", resCode ", resp.Code)
+		s.printResponseInfo(yx.LOG_LV_ERROR, resp)
+	} else {
+		s.printResponseInfo(yx.LOG_LV_INFO, resp)
 	}
 
 	if s.srvNet != nil {
@@ -580,6 +591,51 @@ func (s *BaseServer) handleRequestDirect(req *Request, resp *Response) error {
 	}
 
 	return s.ec.Throw("handleRequestDirect", err)
+}
+
+func (s *BaseServer) printRequestInfo(req *Request) {
+	protoNo := GetProtoNo(req.Mod, req.Cmd)
+
+	logs := make([]string, 0)
+	logs = append(logs, "[L] ====================================================\n")
+	logs = append(logs, "[0] ## REQUEST INFO ##\n")
+
+	log := fmt.Sprint("[1] Serial No.: ", req.SerialNo, "\n")
+	logs = append(logs, log)
+
+	log = fmt.Sprint("[2] Proto No.: ", protoNo, "\n")
+	logs = append(logs, log)
+
+	procName, ok := s.mapProtoNo2ProcName[protoNo]
+	if ok {
+		log = fmt.Sprint("[3] Processor: ", procName, "\n")
+		logs = append(logs, log)
+	}
+
+	logs = append(logs, "[L] ====================================================\n")
+
+	s.logger.Detail(yx.LOG_LV_INFO, logs)
+}
+
+func (s *BaseServer) printResponseInfo(lv int, resp *Response) {
+	protoNo := GetProtoNo(resp.Mod, resp.Cmd)
+
+	logs := make([]string, 0)
+	logs = append(logs, "[L] ====================================================\n")
+	logs = append(logs, "[0] ## RESPONSE INFO ##\n")
+
+	log := fmt.Sprint("[1] Serial No.: ", resp.SerialNo, "\n")
+	logs = append(logs, log)
+
+	log = fmt.Sprint("[2] Proto No.: ", protoNo, "\n")
+	logs = append(logs, log)
+
+	log = fmt.Sprint("[3] Result Code: ", resp.Code, "\n")
+	logs = append(logs, log)
+
+	logs = append(logs, "[L] ====================================================\n")
+
+	s.logger.Detail(lv, logs)
 }
 
 func (s *BaseServer) handleRequestImpl(req *Request, resp *Response) error {

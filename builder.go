@@ -80,8 +80,10 @@ func (b *builder) buildProcessor(s Service, cfg *Config, serviceCfg *ServiceConf
 		}
 		// }
 		// serviceCfg.MapName2Proc[procCfg.Name] = procCfg
-		procFullName := fmt.Sprintf("%s.%s", serviceCfg.Name, procCfg.Name)
-		cfg.MapProcName2ProtoNo[procFullName] = GetProtoNo(serviceCfg.Mod, procCfg.Cmd)
+		if len(serviceCfg.Name) > 0 || len(procCfg.Name) > 0 {
+			procFullName := fmt.Sprintf("%s.%s", serviceCfg.Name, procCfg.Name)
+			cfg.MapProcName2ProtoNo[procFullName] = GetProtoNo(serviceCfg.Mod, procCfg.Cmd)
+		}
 
 		// processor
 		m := v.MethodByName(procCfg.Handler)
