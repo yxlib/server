@@ -655,7 +655,7 @@ func (s *BaseServer) handleRequestImpl(req *Request, resp *Response) error {
 	code, err := serv.OnHandleRequest(req, resp, s.bDebugMode)
 	resp.Code = code
 	if err != nil {
-		if resp.ExtData == nil && len(resp.Payload) == 0 {
+		if len(resp.Payload) == 0 {
 			resp.Payload = []byte(err.Error())
 		}
 
