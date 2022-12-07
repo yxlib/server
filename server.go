@@ -597,22 +597,23 @@ func (s *BaseServer) printRequestInfo(req *Request) {
 	protoNo := GetProtoNo(req.Mod, req.Cmd)
 
 	logs := make([]string, 0)
-	logs = append(logs, "[L] ====================================================\n")
-	logs = append(logs, "[0] ## REQUEST INFO ##\n")
+	logs = append(logs, "\n")
+	logs = append(logs, "[T] ## REQUEST ##\n")
+	logs = append(logs, "[L] *******************************\n")
 
-	log := fmt.Sprint("[1] Serial No.: ", req.SerialNo, "\n")
+	log := fmt.Sprint("[0] Serial No.: ", req.SerialNo, "\n")
 	logs = append(logs, log)
 
-	log = fmt.Sprint("[2] Proto No.: ", protoNo, "\n")
+	log = fmt.Sprint("[1] Proto No.: ", protoNo, "\n")
 	logs = append(logs, log)
 
 	procName, ok := s.mapProtoNo2ProcName[protoNo]
 	if ok {
-		log = fmt.Sprint("[3] Processor: ", procName, "\n")
+		log = fmt.Sprint("[2] Processor: ", procName, "\n")
 		logs = append(logs, log)
 	}
 
-	logs = append(logs, "[L] ====================================================\n")
+	logs = append(logs, "[L] *******************************\n")
 
 	s.logger.Detail(yx.LOG_LV_INFO, logs)
 }
@@ -621,19 +622,20 @@ func (s *BaseServer) printResponseInfo(lv int, resp *Response) {
 	protoNo := GetProtoNo(resp.Mod, resp.Cmd)
 
 	logs := make([]string, 0)
-	logs = append(logs, "[L] ====================================================\n")
-	logs = append(logs, "[0] ## RESPONSE INFO ##\n")
+	logs = append(logs, "[T] ## RESPONSE ##\n")
+	logs = append(logs, "[L] *******************************\n")
 
-	log := fmt.Sprint("[1] Serial No.: ", resp.SerialNo, "\n")
+	log := fmt.Sprint("[0] Serial No.: ", resp.SerialNo, "\n")
 	logs = append(logs, log)
 
-	log = fmt.Sprint("[2] Proto No.: ", protoNo, "\n")
+	log = fmt.Sprint("[1] Proto No.: ", protoNo, "\n")
 	logs = append(logs, log)
 
-	log = fmt.Sprint("[3] Result Code: ", resp.Code, "\n")
+	log = fmt.Sprint("[2] Result Code: ", resp.Code, "\n")
 	logs = append(logs, log)
 
-	logs = append(logs, "[L] ====================================================\n")
+	logs = append(logs, "[L] *******************************\n")
+	logs = append(logs, "\n")
 
 	s.logger.Detail(lv, logs)
 }
