@@ -594,48 +594,34 @@ func (s *BaseServer) handleRequestDirect(req *Request, resp *Response) error {
 }
 
 func (s *BaseServer) printRequestInfo(req *Request) {
+	s.logger.I("=====> START REQUEST:")
+
 	protoNo := GetProtoNo(req.Mod, req.Cmd)
-
-	logs := make([]string, 0)
-	logs = append(logs, "\n")
-	logs = append(logs, "[T] ## REQUEST ##\n")
-	logs = append(logs, "[L] *******************************\n")
-
-	log := fmt.Sprint("[0] Serial No.: ", req.SerialNo, "\n")
-	logs = append(logs, log)
-
-	log = fmt.Sprint("[1] Proto No.: ", protoNo, "\n")
-	logs = append(logs, log)
+	logs := make([][]interface{}, 0)
+	logs = append(logs, yx.LogArgs("[L] *******************************"))
+	logs = append(logs, yx.LogArgs("[0] Serial No.: ", req.SerialNo))
+	logs = append(logs, yx.LogArgs("[1] Proto No.: ", protoNo))
 
 	procName, ok := s.mapProtoNo2ProcName[protoNo]
 	if ok {
-		log = fmt.Sprint("[2] Processor: ", procName, "\n")
-		logs = append(logs, log)
+		logs = append(logs, yx.LogArgs("[2] Processor: ", procName))
 	}
 
-	logs = append(logs, "[L] *******************************\n")
+	logs = append(logs, yx.LogArgs("[L] *******************************"))
 
 	s.logger.Detail(yx.LOG_LV_INFO, logs)
 }
 
 func (s *BaseServer) printResponseInfo(lv int, resp *Response) {
+	s.logger.I("=====> START RESPONSE:")
+
 	protoNo := GetProtoNo(resp.Mod, resp.Cmd)
-
-	logs := make([]string, 0)
-	logs = append(logs, "[T] ## RESPONSE ##\n")
-	logs = append(logs, "[L] *******************************\n")
-
-	log := fmt.Sprint("[0] Serial No.: ", resp.SerialNo, "\n")
-	logs = append(logs, log)
-
-	log = fmt.Sprint("[1] Proto No.: ", protoNo, "\n")
-	logs = append(logs, log)
-
-	log = fmt.Sprint("[2] Result Code: ", resp.Code, "\n")
-	logs = append(logs, log)
-
-	logs = append(logs, "[L] *******************************\n")
-	logs = append(logs, "\n")
+	logs := make([][]interface{}, 0)
+	logs = append(logs, yx.LogArgs("[L] *******************************"))
+	logs = append(logs, yx.LogArgs("[0] Serial No.: ", resp.SerialNo))
+	logs = append(logs, yx.LogArgs("[1] Proto No.: ", protoNo))
+	logs = append(logs, yx.LogArgs("[2] Result Code: ", resp.Code))
+	logs = append(logs, yx.LogArgs("[L] *******************************"))
 
 	s.logger.Detail(lv, logs)
 }
