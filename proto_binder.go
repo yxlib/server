@@ -20,15 +20,15 @@ var (
 const MAX_REUSE_COUNT = 100
 
 type protoBinder struct {
-	mapProtoNo2ReqName  map[uint16]string
-	mapProtoNo2RespName map[uint16]string
+	mapProtoNo2ReqName  map[uint32]string
+	mapProtoNo2RespName map[uint32]string
 	factory             *yx.ObjectFactory
 	ec                  *yx.ErrCatcher
 }
 
 var ProtoBinder = &protoBinder{
-	mapProtoNo2ReqName:  make(map[uint16]string),
-	mapProtoNo2RespName: make(map[uint16]string),
+	mapProtoNo2ReqName:  make(map[uint32]string),
+	mapProtoNo2RespName: make(map[uint32]string),
 	factory:             yx.NewObjectFactory(),
 	ec:                  yx.NewErrCatcher("protoBinder"),
 }
@@ -49,14 +49,11 @@ func (b *protoBinder) GetProtoType(name string) (reflect.Type, bool) {
 }
 
 // Bind protos.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @param reqProtoName, the request proto name.
 // @param respProtoName, the response proto name.
 // @return error, error.
-func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, respProtoName string) error {
-	protoNo := GetProtoNo(mod, cmd)
-
+func (b *protoBinder) BindProto(protoNo uint32, reqProtoName string, respProtoName string) error {
 	_, ok := b.mapProtoNo2ReqName[protoNo]
 	if ok {
 		return b.ec.Throw("BindProto", ErrProtoBindProtoExist)
@@ -81,12 +78,10 @@ func (b *protoBinder) BindProto(mod uint16, cmd uint16, reqProtoName string, res
 }
 
 // Get the request reflect type.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return reflect.Type, reflect type of the request.
 // @return error, error.
-func (b *protoBinder) GetRequestType(mod uint16, cmd uint16) (reflect.Type, error) {
-	protoNo := GetProtoNo(mod, cmd)
+func (b *protoBinder) GetRequestType(protoNo uint32) (reflect.Type, error) {
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return nil, b.ec.Throw("GetRequestType", ErrProtoBindProtoNotExist)
@@ -97,12 +92,10 @@ func (b *protoBinder) GetRequestType(mod uint16, cmd uint16) (reflect.Type, erro
 }
 
 // Get the response reflect type.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return reflect.Type, reflect type of the response.
 // @return error, error.
-func (b *protoBinder) GetResponseType(mod uint16, cmd uint16) (reflect.Type, error) {
-	protoNo := GetProtoNo(mod, cmd)
+func (b *protoBinder) GetResponseType(protoNo uint32) (reflect.Type, error) {
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return nil, b.ec.Throw("GetResponseType", ErrProtoBindProtoNotExist)
@@ -113,12 +106,10 @@ func (b *protoBinder) GetResponseType(mod uint16, cmd uint16) (reflect.Type, err
 }
 
 // Get an request object.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return interface{}, the request object.
 // @return error, error.
-func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
-	protoNo := GetProtoNo(mod, cmd)
+func (b *protoBinder) GetRequest(protoNo uint32) (interface{}, error) {
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return nil, b.ec.Throw("GetRequest", ErrProtoBindProtoNotExist)
@@ -130,15 +121,13 @@ func (b *protoBinder) GetRequest(mod uint16, cmd uint16) (interface{}, error) {
 
 // Reuse an request object.
 // @param v, the reuse request.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return error, error.
-func (b *protoBinder) ReuseRequest(v interface{}, mod uint16, cmd uint16) error {
+func (b *protoBinder) ReuseRequest(v interface{}, protoNo uint32) error {
 	if v == nil {
 		return b.ec.Throw("ReuseRequest", ErrProtoBindReuseIsNil)
 	}
 
-	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2ReqName[protoNo]
 	if !ok {
 		return b.ec.Throw("ReuseRequest", ErrProtoBindProtoNotExist)
@@ -149,12 +138,10 @@ func (b *protoBinder) ReuseRequest(v interface{}, mod uint16, cmd uint16) error 
 }
 
 // Get an response object.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return interface{}, the response object.
 // @return error, error.
-func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
-	protoNo := GetProtoNo(mod, cmd)
+func (b *protoBinder) GetResponse(protoNo uint32) (interface{}, error) {
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return nil, b.ec.Throw("GetResponse", ErrProtoBindProtoNotExist)
@@ -166,15 +153,13 @@ func (b *protoBinder) GetResponse(mod uint16, cmd uint16) (interface{}, error) {
 
 // Reuse an response object.
 // @param v, the reuse response.
-// @param mod, the module of the service.
-// @param cmd, the command of the service.
+// @param protoNo, the proto number.
 // @return error, error.
-func (b *protoBinder) ReuseResponse(v interface{}, mod uint16, cmd uint16) error {
+func (b *protoBinder) ReuseResponse(v interface{}, protoNo uint32) error {
 	if v == nil {
 		return b.ec.Throw("ReuseResponse", ErrProtoBindReuseIsNil)
 	}
 
-	protoNo := GetProtoNo(mod, cmd)
 	name, ok := b.mapProtoNo2RespName[protoNo]
 	if !ok {
 		return b.ec.Throw("ReuseResponse", ErrProtoBindProtoNotExist)

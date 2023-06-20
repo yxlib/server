@@ -4,11 +4,9 @@
 
 package server
 
-import "errors"
-
-var (
-	ErrPackFrameIsNil = errors.New("pack frame is nil")
-)
+// var (
+// 	ErrPackFrameIsNil = errors.New("pack frame is nil")
+// )
 
 const (
 	RESP_CODE_SUCCESS              = 0
@@ -20,73 +18,104 @@ const (
 	RESP_CODE_MARSHAL_RESP_FAILED  = -6
 )
 
-type PeerInfo struct {
-	PeerType uint8
-	PeerNo   uint16
+type Pack interface {
+	SetSrcID(srcId uint64)
+	GetSrcID() uint64
+
+	SetSeqNum(num uint32)
+	GetSeqNum() uint32
+
+	SetProtoNo(protoNo uint32)
+	GetProtoNo() uint32
+
+	SetOprDstID(dstId uint64)
+	GetOprDstID() uint64
+
+	SetData(data []byte)
+	GetData() []byte
+
+	SetDataObj(obj interface{})
+	GetDataObj() interface{}
 }
 
-func NewPeerInfo(peerType uint8, peerNo uint16) *PeerInfo {
-	return &PeerInfo{
-		PeerType: peerType,
-		PeerNo:   peerNo,
-	}
+type Request interface {
+	Pack
 }
 
-type Pack struct {
-	SerialNo uint16
-	Mod      uint16
-	Cmd      uint16
-	Src      *PeerInfo
-	Tran     *PeerInfo
-	Dst      *PeerInfo
-	Payload  []byte
-	ExtData  interface{}
+type Response interface {
+	Pack
+
+	SetResCode(code int)
+	GetResCode() int
 }
 
-func NewPack() *Pack {
-	return &Pack{
-		SerialNo: 0,
-		Mod:      0,
-		Cmd:      0,
-		Src:      nil,
-		Tran:     nil,
-		Dst:      nil,
-		Payload:  nil,
-		ExtData:  nil,
-	}
-}
+// type PeerInfo struct {
+// 	PeerType uint8
+// 	PeerNo   uint16
+// }
 
-type Request struct {
-	*Pack
-	ConnId uint64
-}
+// func NewPeerInfo(peerType uint8, peerNo uint16) *PeerInfo {
+// 	return &PeerInfo{
+// 		PeerType: peerType,
+// 		PeerNo:   peerNo,
+// 	}
+// }
 
-func NewRequest(connId uint64) *Request {
-	return &Request{
-		Pack:   NewPack(),
-		ConnId: connId,
-	}
-}
+// type Pack struct {
+// 	SerialNo uint16
+// 	Mod      uint16
+// 	Cmd      uint16
+// 	Src      *PeerInfo
+// 	Tran     *PeerInfo
+// 	Dst      *PeerInfo
+// 	Payload  []byte
+// 	ExtData  interface{}
+// }
 
-type Response struct {
-	*Pack
-	Code int32
-}
+// func NewPack() *Pack {
+// 	return &Pack{
+// 		SerialNo: 0,
+// 		Mod:      0,
+// 		Cmd:      0,
+// 		Src:      nil,
+// 		Tran:     nil,
+// 		Dst:      nil,
+// 		Payload:  nil,
+// 		ExtData:  nil,
+// 	}
+// }
 
-func NewResponse(req *Request) *Response {
-	resp := &Response{
-		Pack: NewPack(),
-		Code: 0,
-	}
+// type Request struct {
+// 	*Pack
+// 	ConnId uint64
+// }
 
-	if req != nil {
-		resp.SerialNo = req.SerialNo
-		resp.Mod = req.Mod
-		resp.Cmd = req.Cmd
-		resp.Src = req.Dst
-		resp.Tran = req.Tran
-		resp.Dst = req.Src
-	}
+// func NewRequest(connId uint64) *Request {
+// 	return &Request{
+// 		Pack:   NewPack(),
+// 		ConnId: connId,
+// 	}
+// }
 
-	return resp
-}
+// type Response struct {
+// 	*Pack
+// 	Code int32
+// }
+
+// func NewResponse(req *Request) *Response {
+// 	resp := &Response{
+// 		Pack: NewPack(),
+// 		Code: 0,
+// 	}
+
+// 	if req != nil {
+// 		resp.SerialNo = req.SerialNo
+// 		resp.Mod = req.Mod
+// 		resp.Cmd = req.Cmd
+// 		resp.Src = req.Dst
+// 		resp.Tran = req.Tran
+// 		resp.Dst = req.Src
+// 	}
+
+// 	return resp
+// }

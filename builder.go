@@ -27,12 +27,8 @@ func (b *builder) Build(srv Server, cfg *Config) {
 		b.genAutoModCmd(srv, cfg)
 	}
 
-	if cfg.IsUseWorkerMode {
-		srv.UseWorkerMode(cfg.MaxReqNum, cfg.MaxTaskNum)
-	}
-
 	// cfg.MapName2Service = make(map[string]*ServiceConf)
-	cfg.MapProcName2ProtoNo = make(map[string]uint16)
+	cfg.MapProcName2ProtoNo = make(map[string]uint32)
 	for _, serviceCfg := range cfg.Services {
 		b.BuildService(srv, cfg, serviceCfg)
 	}
@@ -53,14 +49,14 @@ func (b *builder) BuildService(srv Server, cfg *Config, serviceCfg *ServiceConf)
 }
 
 func (b *builder) genAutoModCmd(srv Server, cfg *Config) {
-	mod := uint16(1)
+	mod := uint32(1)
 	for _, service := range cfg.Services {
 		service.Mod = mod
 		mod++
 
-		cmd := uint16(1)
+		cmd := uint32(1)
 		for _, proc := range service.Processors {
-			proc.Cmd = cmd
+			proc.ProtoNo = GetProtoNo(mod, cmd)
 			cmd++
 		}
 	}
@@ -73,7 +69,7 @@ func (b *builder) buildProcessor(s Service, cfg *Config, serviceCfg *ServiceConf
 	for _, procCfg := range serviceCfg.Processors {
 		// proto
 		// if cfg.Req != "" && cfg.Resp != "" {
-		err := ProtoBinder.BindProto(serviceCfg.Mod, procCfg.Cmd, procCfg.Req, procCfg.Resp)
+		err := ProtoBinder.BindProto(procCfg.ProtoNo, procCfg.Req, procCfg.Resp)
 		if err != nil {
 			b.logger.W("not support processor ", procCfg.Handler)
 			continue
@@ -82,12 +78,13 @@ func (b *builder) buildProcessor(s Service, cfg *Config, serviceCfg *ServiceConf
 		// serviceCfg.MapName2Proc[procCfg.Name] = procCfg
 		if len(serviceCfg.Name) > 0 || len(procCfg.Name) > 0 {
 			procFullName := fmt.Sprintf("%s.%s", serviceCfg.Name, procCfg.Name)
-			cfg.MapProcName2ProtoNo[procFullName] = GetProtoNo(serviceCfg.Mod, procCfg.Cmd)
+			cfg.MapProcName2ProtoNo[procFullName] = procCfg.ProtoNo
 		}
 
 		// processor
 		m := v.MethodByName(procCfg.Handler)
-		err = s.AddReflectProcessor(m, procCfg.Cmd)
+		cmd := GetCmd(procCfg.ProtoNo)
+		err = s.AddReflectProcessor(m, cmd)
 		if err != nil {
 			b.logger.E("AddReflectProcessor err: ", err)
 			b.logger.W("not support processor ", procCfg.Handler)

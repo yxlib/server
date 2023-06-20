@@ -18,7 +18,7 @@ var (
 	ErrProcNotExist = errors.New("this cmd does not have processor")
 )
 
-type Processor = func(req *Request, resp *Response) (int32, error)
+type Processor = func(req Request, resp Response) (int, error)
 
 // type Processor interface {
 // 	OnHandleRequest(req *Request, resp *Response) (int32, error)
@@ -33,7 +33,7 @@ type Service interface {
 	// @param p, the processor.
 	// @param cmd, the command of the processor.
 	// @return error, error.
-	AddReflectProcessor(p reflect.Value, cmd uint16) error
+	AddReflectProcessor(p reflect.Value, cmd uint32) error
 
 	// Call when handle a request.
 	// @param req, the request.
@@ -41,19 +41,19 @@ type Service interface {
 	// @param bDebugMode, true mean use debug mode, false mean not use.
 	// @return int32, the result code.
 	// @return error, error.
-	OnHandleRequest(req *Request, resp *Response, bDebugMode bool) (int32, error)
+	OnHandleRequest(req Request, resp Response, bDebugMode bool) (int, error)
 }
 
 type BaseService struct {
 	name             string
-	mapCmd2Processor map[uint16]reflect.Value
+	mapCmd2Processor map[uint32]reflect.Value
 	ec               *yx.ErrCatcher
 }
 
 func NewBaseService(name string) *BaseService {
 	return &BaseService{
 		name:             name,
-		mapCmd2Processor: make(map[uint16]reflect.Value),
+		mapCmd2Processor: make(map[uint32]reflect.Value),
 		ec:               yx.NewErrCatcher("BaseService(" + name + ")"),
 	}
 }
@@ -68,7 +68,7 @@ func (s *BaseService) GetName() string {
 // @param p, the processor.
 // @param cmd, the command of the processor.
 // @return error, error.
-func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint16) error {
+func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint32) error {
 	var err error = nil
 	defer s.ec.DeferThrow("AddReflectProcessor", &err)
 
@@ -91,7 +91,7 @@ func (s *BaseService) AddReflectProcessor(p reflect.Value, cmd uint16) error {
 // @param p, the processor.
 // @param cmd, the command of the processor.
 // @return error, error.
-func (s *BaseService) AddProcessor(p Processor, cmd uint16) error {
+func (s *BaseService) AddProcessor(p Processor, cmd uint32) error {
 	var err error = nil
 	defer s.ec.DeferThrow("AddProcessor", &err)
 
@@ -108,7 +108,7 @@ func (s *BaseService) AddProcessor(p Processor, cmd uint16) error {
 // @param cmd, the command of the processor.
 // @return Processor, the processor.
 // @return bool, true mean success, false mean failed.
-func (s *BaseService) GetProcessor(cmd uint16) (Processor, bool) {
+func (s *BaseService) GetProcessor(cmd uint32) (Processor, bool) {
 	var p Processor = nil
 	v, ok := s.mapCmd2Processor[cmd]
 	if ok {
@@ -121,7 +121,7 @@ func (s *BaseService) GetProcessor(cmd uint16) (Processor, bool) {
 // Remove a processor by command cmd.
 // @param cmd, the command of the processor.
 // @return error, error.
-func (s *BaseService) RemoveProcessor(cmd uint16) error {
+func (s *BaseService) RemoveProcessor(cmd uint32) error {
 	_, ok := s.mapCmd2Processor[cmd]
 	if !ok {
 		return s.ec.Throw("RemoveProcessor", ErrProcNotExist)
@@ -134,17 +134,19 @@ func (s *BaseService) RemoveProcessor(cmd uint16) error {
 //================================================
 //                    Service
 //================================================
-func (s *BaseService) OnHandleRequest(req *Request, resp *Response, bDebugMode bool) (int32, error) {
+func (s *BaseService) OnHandleRequest(req Request, resp Response, bDebugMode bool) (int, error) {
 	var err error = nil
 	defer s.ec.DeferThrow("OnHandleRequest", &err)
 
-	processor, ok := s.GetProcessor(req.Cmd)
+	protoNo := req.GetProtoNo()
+	cmd := GetCmd(protoNo)
+	processor, ok := s.GetProcessor(cmd)
 	if !ok {
 		err = ErrProcNotExist
 		return RESP_CODE_SYS_UNKNOWN_CMD, err
 	}
 
-	var code int32 = RESP_CODE_SYS_UNKNOWN_ERR
+	var code int = RESP_CODE_SYS_UNKNOWN_ERR
 	err = ErrUnknown
 	yx.RunDangerCode(func() {
 		code, err = processor(req, resp)

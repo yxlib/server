@@ -1,7 +1,4 @@
 {
-    "use_worker_mode" : true,
-    "max_req_num" : 10,
-    "max_task_num" : 10,
     "auto_mod_cmd" : false,
     "enumerable" : false,
     "enum_protoNo" : 0,
@@ -15,14 +12,14 @@
             [
                 {
                     "name" : "Cmd1",
-                    "cmd" : 1,
+                    "proto_num" : 101,
                     "handler" : "OnHandleCmd1",
                     "req" : "github.com/yxlib/server.Cmd1Request",
                     "resp" : "github.com/yxlib/server.Cmd1Response"
                 },
                 {
                     "name" : "Cmd2",
-                    "cmd" : 2,
+                    "proto_num" : 102,
                     "handler" : "OnHandleCmd2",
                     "req" : "github.com/yxlib/server.Cmd2Request",
                     "resp" : "github.com/yxlib/server.Cmd2Response"

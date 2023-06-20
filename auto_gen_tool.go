@@ -58,7 +58,7 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 
 			if cfg.Req != "" {
 				reqStr := getFilePackageClassName(cfg.Req, regPackName)
-				if !objectSet.Exist(reqStr) {
+				if ok, _ := objectSet.Exist(reqStr); !ok {
 					f.WriteString("    server.ProtoBinder.RegisterProto(&" + reqStr + "{})\n")
 					objectSet.Add(reqStr)
 				}
@@ -66,7 +66,7 @@ func GenRegisterFileByCfg(srvCfg *Config, regFilePath string, regPackName string
 
 			if cfg.Resp != "" {
 				respStr := getFilePackageClassName(cfg.Resp, regPackName)
-				if !objectSet.Exist(respStr) {
+				if ok, _ := objectSet.Exist(respStr); !ok {
 					f.WriteString("    server.ProtoBinder.RegisterProto(&" + respStr + "{})\n")
 					objectSet.Add(respStr)
 				}
@@ -124,7 +124,7 @@ func writeImport(servConfs []*ServiceConf, regPackName string, f *os.File) {
 	f.WriteString(")\n\n")
 }
 
-func addProtoPackage(protoCfg string, regPackName string, packSet *yx.Set) {
+func addProtoPackage(protoCfg string, regPackName string, packSet yx.Set) {
 	if protoCfg == "" {
 		return
 	}

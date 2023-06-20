@@ -6,7 +6,7 @@ package server
 
 type ProcConf struct {
 	Name    string `json:"name"`
-	Cmd     uint16 `json:"cmd"`
+	ProtoNo uint32 `json:"proto_num"`
 	Req     string `json:"req"`
 	Resp    string `json:"resp"`
 	Handler string `json:"handler"`
@@ -15,21 +15,18 @@ type ProcConf struct {
 type ServiceConf struct {
 	Name       string      `json:"name"`
 	Service    string      `json:"service"`
-	Mod        uint16      `json:"mod"`
+	Mod        uint32      `json:"mod"`
 	Processors []*ProcConf `json:"processors"`
 	// MapName2Proc map[string]*ProcConf
 }
 
 type Config struct {
-	IsUseWorkerMode bool           `json:"use_worker_mode"`
-	MaxReqNum       uint16         `json:"max_req_num"`
-	MaxTaskNum      uint16         `json:"max_task_num"`
-	IsAutoModCmd    bool           `json:"auto_mod_cmd"`
-	IsEnumerable    bool           `json:"enumerable"`
-	EnumProtoNo     uint16         `json:"enum_protoNo"`
-	Services        []*ServiceConf `json:"services"`
+	IsAutoModCmd bool           `json:"auto_mod_cmd"`
+	IsEnumerable bool           `json:"enumerable"`
+	EnumProtoNo  uint32         `json:"enum_protoNo"`
+	Services     []*ServiceConf `json:"services"`
 	// MapName2Service     map[string]*ServiceConf
-	MapProcName2ProtoNo map[string]uint16
+	MapProcName2ProtoNo map[string]uint32
 }
 
 var CfgInst *Config = &Config{}
