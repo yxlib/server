@@ -36,14 +36,14 @@ type Interceptor interface {
 	// @param resp, the response of the request
 	// @return int32, result code.
 	// @return error, error.
-	OnPreHandle(req Request, resp Response) (int, error)
+	OnPreHandle(req Request, resp Response) (int32, error)
 
 	// Call after handle the request.
 	// @param req, the request
 	// @param resp, the response of the request
 	// @return int32, result code.
 	// @return error, error.
-	OnHandleCompletion(req Request, resp Response) (int, error)
+	OnHandleCompletion(req Request, resp Response) (int32, error)
 
 	// Call after send the response.
 	// @param req, the request
@@ -308,8 +308,8 @@ func (s *BaseServer) HandleRequest(req Request, resp Response) error {
 //================================================
 //                 private
 //================================================
-func (s *BaseServer) interceptHandle(it Interceptor, step uint8, req Request, resp Response) (int, error) {
-	var code int = 0
+func (s *BaseServer) interceptHandle(it Interceptor, step uint8, req Request, resp Response) (int32, error) {
+	var code int32 = 0
 	var err error = nil
 
 	if step == INTERCPT_STEP_PRE_HANDLE {
@@ -323,7 +323,7 @@ func (s *BaseServer) interceptHandle(it Interceptor, step uint8, req Request, re
 	return code, s.ec.Throw("interceptHandle", err)
 }
 
-func (s *BaseServer) listInterceptHandle(list InterceptorList, step uint8, req Request, resp Response) (int, error) {
+func (s *BaseServer) listInterceptHandle(list InterceptorList, step uint8, req Request, resp Response) (int32, error) {
 	if len(list) == 0 {
 		return RESP_CODE_SUCCESS, nil
 	}
@@ -338,7 +338,7 @@ func (s *BaseServer) listInterceptHandle(list InterceptorList, step uint8, req R
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *BaseServer) reverseListInterceptHandle(list InterceptorList, step uint8, req Request, resp Response) (int, error) {
+func (s *BaseServer) reverseListInterceptHandle(list InterceptorList, step uint8, req Request, resp Response) (int32, error) {
 	if len(list) == 0 {
 		return RESP_CODE_SUCCESS, nil
 	}
@@ -353,7 +353,7 @@ func (s *BaseServer) reverseListInterceptHandle(list InterceptorList, step uint8
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *BaseServer) intercept(step uint8, req Request, resp Response) (int, error) {
+func (s *BaseServer) intercept(step uint8, req Request, resp Response) (int32, error) {
 	// global first
 	code, err := s.listInterceptHandle(s.globalInterceptors, step, req, resp)
 	if err != nil {
@@ -375,7 +375,7 @@ func (s *BaseServer) intercept(step uint8, req Request, resp Response) (int, err
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *BaseServer) reverseIntercept(step uint8, req Request, resp Response) (int, error) {
+func (s *BaseServer) reverseIntercept(step uint8, req Request, resp Response) (int32, error) {
 	// mod first, reverse visit
 	if req != nil {
 		protoNo := req.GetProtoNo()
@@ -397,12 +397,12 @@ func (s *BaseServer) reverseIntercept(step uint8, req Request, resp Response) (i
 	return RESP_CODE_SUCCESS, nil
 }
 
-func (s *BaseServer) preHandle(req Request, resp Response) (int, error) {
+func (s *BaseServer) preHandle(req Request, resp Response) (int32, error) {
 	code, err := s.intercept(INTERCPT_STEP_PRE_HANDLE, req, resp)
 	return code, s.ec.Throw("preHandle", err)
 }
 
-func (s *BaseServer) handleCompletion(req Request, resp Response) (int, error) {
+func (s *BaseServer) handleCompletion(req Request, resp Response) (int32, error) {
 	code, err := s.reverseIntercept(INTERCPT_STEP_HANDLE_COMPL, req, resp)
 	return code, s.ec.Throw("handleCompletion", err)
 }

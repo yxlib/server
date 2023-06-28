@@ -45,8 +45,8 @@ type Request interface {
 type Response interface {
 	Pack
 
-	SetResCode(code int)
-	GetResCode() int
+	SetResCode(code int32)
+	GetResCode() int32
 }
 
 // type PeerInfo struct {

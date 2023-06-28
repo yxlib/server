@@ -18,7 +18,7 @@ var (
 	ErrProcNotExist = errors.New("this cmd does not have processor")
 )
 
-type Processor = func(req Request, resp Response) (int, error)
+type Processor = func(req Request, resp Response) (int32, error)
 
 // type Processor interface {
 // 	OnHandleRequest(req *Request, resp *Response) (int32, error)
@@ -41,7 +41,7 @@ type Service interface {
 	// @param bDebugMode, true mean use debug mode, false mean not use.
 	// @return int32, the result code.
 	// @return error, error.
-	OnHandleRequest(req Request, resp Response, bDebugMode bool) (int, error)
+	OnHandleRequest(req Request, resp Response, bDebugMode bool) (int32, error)
 }
 
 type BaseService struct {
@@ -134,7 +134,7 @@ func (s *BaseService) RemoveProcessor(cmd uint32) error {
 //================================================
 //                    Service
 //================================================
-func (s *BaseService) OnHandleRequest(req Request, resp Response, bDebugMode bool) (int, error) {
+func (s *BaseService) OnHandleRequest(req Request, resp Response, bDebugMode bool) (int32, error) {
 	var err error = nil
 	defer s.ec.DeferThrow("OnHandleRequest", &err)
 
@@ -146,7 +146,7 @@ func (s *BaseService) OnHandleRequest(req Request, resp Response, bDebugMode boo
 		return RESP_CODE_SYS_UNKNOWN_CMD, err
 	}
 
-	var code int = RESP_CODE_SYS_UNKNOWN_ERR
+	var code int32 = RESP_CODE_SYS_UNKNOWN_ERR
 	err = ErrUnknown
 	yx.RunDangerCode(func() {
 		code, err = processor(req, resp)
